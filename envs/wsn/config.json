@@ -1,0 +1,17 @@
+{
+  "learning_rate": 0.01,
+  "reward_decay": 0.9,
+  "e_greedy": 0.9,
+  "end_state": [-1,-1,-1],
+  "connections": [["s",1, "null"],["s",2 , 0],["s","b",1]],
+  "MAX_CACHE": 10,
+  "loss_rate": [0.05,0.1,0.15],
+  "MAX_TIMES": 100,
+  "decision_interval": 2,
+  "sample_rate": 1,
+  "sensor_num": 3,
+  "punishment": -100,
+  "n_actions": 2,
+  "observation_size": 3,
+  "state_last_action": true
+}
