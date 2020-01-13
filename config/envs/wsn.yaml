@@ -2,4 +2,4 @@ env: wsn
 
 env_args:
   state_last_action: true
-t_max: 100000
+t_max: 200000

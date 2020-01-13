@@ -19,6 +19,7 @@ class Environment(MultiAgentEnv):
         self.decision_interval = config.get("decision_interval")
         self.sample_rate = config.get("sample_rate")
         self.episode_limit = config.get("MAX_TIMES") #最大step数量，同时也为buffer中的宽度，episode_limit+1
+        self.end_obs = np.array([-1]*self.observation_size)
 
     def get_obs(self):
         agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
@@ -34,6 +35,8 @@ class Environment(MultiAgentEnv):
         :param agent_id:
         :return: 
         """
+        if self.cnt == self.MAX_TIMES:
+            return self.end_obs
         obs = 0
         for sensor1 in self.sensors:
             if sensor1.id == agent_id:
@@ -61,23 +64,18 @@ class Environment(MultiAgentEnv):
         :param actions:         [1,1,1]
         :return: 
         '''
-        # former_cache = base_station.cache + satellite.cache
-        # cache_sensor = 0
-        # for i in range(self.sensor_num):
-        #     cache_sensor += sensors[i].cache
+        # former_cache = self.base_station.cache + self.satellite.cache
         self.cnt += 1
         action_results = self.do_actions(actions)
         # rewards = []
-        # for i in range(self.sensor_num):
+        # for i in range(self.n_agents):
         #     if not action_results[i]:
         #         reward = self.punishment
         #     else:
-        #         dif_cache = base_station.cache + satellite.cache - former_cache
-        #         # reward = dif_cache - self.decision_interval * self.sample_rate * self.sensor_num
-        #         # reward = dif_cache / (self.decision_interval * self.sample_rate * self.sensor_num + cache_sensor)
-        #         reward = dif_cache / (self.decision_interval * self.sample_rate * self.sensor_num)
+        #         dif_cache = self.base_station.cache + self.satellite.cache - former_cache
+        #         reward = dif_cache / (self.decision_interval * self.sample_rate * self.n_agents * self.MAX_TIMES)
         #     rewards.append(reward)
-        #
+
         actions = [int(a) for a in actions]
         self.last_action = np.eye(self.n_actions)[np.array(actions)]
         if self.cnt == self.MAX_TIMES:
