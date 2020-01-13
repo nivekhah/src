@@ -38,15 +38,21 @@ class Environment(MultiAgentEnv):
         for sensor1 in self.sensors:
             if sensor1.id == agent_id:
                 #传参数给get_observation，告知其周围的连接
-                for sensor in self.sensors:
-                    peer_sensors = []
-                    connection = self.connections[agent_id]
-                    for peer_id in connection:
-                        for peer_sensor in self.sensors:
-                            if peer_sensor.id == peer_id:
-                                peer_sensors.append(peer_sensor)
-                # print("peer sensors:", peer_sensors)
-                obs = sensor1.get_observation(peer_sensors)
+                components = []
+                connection = self.connections[agent_id]
+                for component_id in connection:
+                    if component_id == self.satellite.id:
+                        component = self.satellite
+                        components.append(component)
+                    elif component_id == self.base_station.id:
+                        component = self.base_station
+                        components.append(component)
+                    else:
+                        for sensor in self.sensors:
+                            if sensor.id == component_id:
+                                component = sensor
+                                components.append(component)
+                obs = sensor1.get_observation(components)
                 # print("state:", obs)
         return copy.deepcopy(obs)
 

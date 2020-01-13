@@ -61,7 +61,7 @@ class Sensor(Component):
         for peer_id in self.connection:
             if type(peer_id) != str:
                 self.peer_sensor_ids.append(peer_id)
-        self.state = np.zeros(3)
+        self.state = np.zeros(config.get("observation_size"))
         self.sample_rate = config.get("sample_rate")
         self.decision_interval = config.get("decision_interval")
 
@@ -118,23 +118,11 @@ class Sensor(Component):
         self.state[1] = 0
         self.state[1] = 0
 
-    def get_observation(self, peer_sensors):
-        assert isinstance(peer_sensors, list)
-        if BaseStation.id in self.connection:
-            self.state[0] = -1
-            for peer_id in self.peer_sensor_ids:
-                for sensor in peer_sensors:
-                    if peer_id == sensor.id:
-                        assert isinstance(sensor, Sensor)
-                        # self.state[1] = sensor.MAX_CACHE - sensor.cache
-                        self.state[1] = sensor.cache
-        else:
-            for peer_id in self.peer_sensor_ids:
-                for sensor in peer_sensors:
-                    if peer_id == sensor.id:
-                        assert isinstance(sensor, Sensor)
-                        # self.state[self.peer_sensor_ids.index(peer_id)] = sensor.MAX_CACHE - sensor.cache
-                        self.state[self.peer_sensor_ids.index(peer_id)] = sensor.cache
+    def get_observation(self, components):
+        assert isinstance(components, list)
+        for i in range(len(components)):
+            assert isinstance(components[i], Component)
+            self.state[i] = components[i].cache
         self.state[-1] = self.cache
         # return str(self.state)
         return copy.deepcopy(self.state)

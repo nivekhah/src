@@ -12,6 +12,6 @@
   "sensor_num": 3,
   "punishment": -100,
   "n_actions": 2,
-  "observation_size": 3,
+  "observation_size": 4,
   "state_last_action": true
 }
