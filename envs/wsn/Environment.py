@@ -5,7 +5,7 @@ import numpy as np
 import copy
 
 class Environment(MultiAgentEnv):
-    def __init__(self,state_last_action=True,seed=None):
+    def __init__(self,state_last_action=True, seed=None):
         self.connections = config.get("connections")
         self.n_agents = config.get("sensor_num")
         self.base_station = BaseStation()
@@ -14,20 +14,51 @@ class Environment(MultiAgentEnv):
         self.n_actions = config.get("n_actions")
         self.observation_size = config.get("observation_size")
         self.state_last_action = config.get("state_last_action")
-        self.last_action = np.zeros((self.n_agents, self.n_actions)) ##
-        self.MAX_TIMES = config.get("MAX_TIMES") ##
+        self.last_action = np.zeros((self.n_agents, self.n_actions))
+        self.MAX_STEPS = config.get("MAX_STEPS")
         self.decision_interval = config.get("decision_interval")
         self.sample_rate = config.get("sample_rate")
-        self.episode_limit = config.get("MAX_TIMES") #最大step数量，同时也为buffer中的宽度，episode_limit+1
+        self.episode_limit = config.get("MAX_STEPS") #最大step数量，同时也为buffer中的宽度，episode_limit+1
         self.end_obs = np.array([-1]*self.observation_size)
 
     def get_obs(self):
         agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
-        # print("obss: ", agents_obs)
         return agents_obs
 
     def get_total_actions(self):
         return self.n_actions
+
+    def get_avail_agent_actions(self, agent_id):
+        '''
+        returns the available actions for agent_id.
+        :param agent_id:
+        :return:
+        '''
+        return [1] * self.n_actions
+
+    def get_avail_actions(self):
+        """Returns the available actions of all agents in a list."""
+        avail_actions = []
+        for agent_id in range(self.n_agents):
+            avail_agent = self.get_avail_agent_actions(agent_id)
+            avail_actions.append(avail_agent)
+        return avail_actions
+
+    def get_obs_size(self):
+        return self.observation_size
+
+    def reset(self):
+        self.cnt = 0
+        self.base_station.reset()
+        self.satellite.reset()
+        for sensor in self.sensors:
+            sensor.reset()
+        for sensor in self.sensors:
+            sensor.sample_data()
+        self.last_action = np.zeros((self.n_agents, self.n_actions))
+
+    def get_env_info(self):
+        return super().get_env_info()
 
     def get_obs_agent(self, agent_id):
         """
@@ -35,11 +66,11 @@ class Environment(MultiAgentEnv):
         :param agent_id:
         :return: 
         """
-        if self.cnt == self.MAX_TIMES:
+        if self.cnt == self.MAX_STEPS:
             return self.end_obs
         obs = 0
-        for sensor1 in self.sensors:
-            if sensor1.id == agent_id:
+        for current_sensor in self.sensors:
+            if current_sensor.id == agent_id:
                 #传参数给get_observation，告知其周围的连接
                 components = []
                 connection = self.connections[agent_id]
@@ -55,8 +86,7 @@ class Environment(MultiAgentEnv):
                             if sensor.id == component_id:
                                 component = sensor
                                 components.append(component)
-                obs = sensor1.get_observation(components)
-                # print("state:", obs)
+                obs = current_sensor.get_observation(components)
         return copy.deepcopy(obs)
 
     def step(self, actions):
@@ -73,20 +103,22 @@ class Environment(MultiAgentEnv):
         #         reward = self.punishment
         #     else:
         #         dif_cache = self.base_station.cache + self.satellite.cache - former_cache
-        #         reward = dif_cache / (self.decision_interval * self.sample_rate * self.n_agents * self.MAX_TIMES)
+        #         reward = dif_cache / (self.decision_interval * self.sample_rate * self.n_agents * self.MAX_STEPS)
         #     rewards.append(reward)
 
         actions = [int(a) for a in actions]
         self.last_action = np.eye(self.n_actions)[np.array(actions)]
-        if self.cnt == self.MAX_TIMES:
+        if self.cnt == self.MAX_STEPS:
             done = True
         else:
             done = False
-
-        reward = 0
+        # *************************延迟reward设置*********************************
         if done:  # 如果此回合结束，将 基站和卫星接收的总数据量/sensor收集的总数据量 作为总的reward
-            reward = (self.base_station.cache + self.satellite.cache) / \
-                     (self.decision_interval * self.sample_rate * self.MAX_TIMES * self.n_agents)
+            sensor_data = 0
+            for sensor in self.sensors:
+                sensor_data += sensor.cache
+            reward = (self.base_station.cache + self.satellite.cache + sensor_data) / \
+                     (self.decision_interval * self.sample_rate * self.MAX_STEPS * self.n_agents)
         else:
             reward = 0
 
@@ -94,41 +126,11 @@ class Environment(MultiAgentEnv):
             sensor.sample_data()
         return reward, done, {}
 
-    def get_avail_agent_actions(self, agent_id):
-        '''
-        returns the available actions for agent_id.
-        :param agent_id: 
-        :return: 
-        '''
-        return [1] * self.n_actions
-
-    def get_obs_size(self):
-        return self.observation_size
-
-    def get_avail_actions(self):
-        """Returns the available actions of all agents in a list."""
-        avail_actions = []
-        for agent_id in range(self.n_agents):
-            avail_agent = self.get_avail_agent_actions(agent_id)
-            avail_actions.append(avail_agent)
-        return avail_actions
-
     def get_state_size(self):
         size = self.n_agents*1+1+1
         if self.state_last_action:
             size += self.n_agents * self.n_actions
         return size
-
-
-    def reset(self):
-        self.cnt = 0  ##
-        self.base_station.reset()
-        self.satellite.reset()
-        for sensor in self.sensors:
-            sensor.reset()
-        for sensor in self.sensors:
-            sensor.sample_data()
-        self.last_action = np.zeros((self.n_agents, self.n_actions))
 
     def get_state(self):
         """Returns the global state.
@@ -141,9 +143,6 @@ class Environment(MultiAgentEnv):
         if self.state_last_action:
             state = np.append(state, self.last_action.flatten())
         return state
-
-    def get_env_info(self):
-        return super().get_env_info()
 
     def do_actions(self, actions):
         action_results = []

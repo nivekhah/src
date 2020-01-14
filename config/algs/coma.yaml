@@ -1,6 +1,6 @@
 # --- COMA specific parameters ---
 
-action_selector: "multinomial"
+action_selector: "epsilon_greedy"
 epsilon_start: .5
 epsilon_finish: .01
 epsilon_anneal_time: 100000

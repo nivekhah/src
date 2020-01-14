@@ -8,9 +8,21 @@
 @time    : '2020'-'01'-'02' '17':'59':'21'
 @contact : zongwang.zhang@outlook.com
 '''
-import json
+config = {
+}
+assert isinstance(config,dict)
+config["connections"] = [["s", 1, "null"], ["s", 2, 0], ["s", "b", 1]]
+config["sensor_num"] = 3
+config["MAX_CACHE_SIZE"] = [10] * config.get("sensor_num")
+config["loss_rate"] = [
+    [0.5, 0.2, 0],
+    [0.5, 0.2, 0.2],
+    [0.5, 0.3, 0.2]
+] 
+config["MAX_STEPS"] = 100
+config["decision_interval"] = 2
+config["sample_rate"] =  1
 
-json_file = open("src/envs/wsn/config.json","r",encoding="utf-8")
-config = json.load(json_file)
-assert isinstance(config, dict)
-# print(type(config.get("decision_interval")))
+config["n_actions"] = 2
+config["observation_size"] = 4,
+config["state_last_action"] = True
