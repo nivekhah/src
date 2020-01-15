@@ -19,7 +19,7 @@ class Environment(MultiAgentEnv):
         self.decision_interval = config.get("decision_interval")
         self.sample_rate = config.get("sample_rate")
         self.episode_limit = config.get("MAX_STEPS") #最大step数量，同时也为buffer中的宽度，episode_limit+1
-        self.end_obs = np.array([-1]*self.observation_size)
+        self.end_obs = np.array([-1] * int(self.observation_size))
 
     def get_obs(self):
         agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
@@ -127,21 +127,39 @@ class Environment(MultiAgentEnv):
         return reward, done, {}
 
     def get_state_size(self):
-        size = self.n_agents*1+1+1
+        size = 0
+
+        # cache
+        # size += self.n_agents*1 + 1 + 1
+
+        # action
         if self.state_last_action:
             size += self.n_agents * self.n_actions
+
+        # loss rate
+        size += self.n_agents * 3
         return size
 
     def get_state(self):
         """Returns the global state.
         NOTE: This functon should not be used during decentralised execution.
+        所有component的cache以及所有loss rate, action
         """
+        state = []
+        # 所有cache
         base_state_list = [self.base_station.cache,self.satellite.cache]
         sensors_state_list = [sensor.cache for sensor in self.sensors]
         base_state_list.extend(sensors_state_list)
-        state = np.array(base_state_list)
+        base_state_list = np.array(base_state_list)
+        # 所有loss rate
+        loss_rate = config.get("loss_rate")
+        assert isinstance(loss_rate, list)
+        loss_rate = np.array(loss_rate)
+        # action
         if self.state_last_action:
-            state = np.append(state, self.last_action.flatten())
+            state = self.last_action.flatten() # 加上 action
+        state = np.append(state, loss_rate.flatten()) #加上loss rate
+        # state = np.append(state, base_state_list.flatten()) # 加上 cache
         return state
 
     def do_actions(self, actions):

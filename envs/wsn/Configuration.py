@@ -15,14 +15,14 @@ config["connections"] = [["s", 1, "null"], ["s", 2, 0], ["s", "b", 1]]
 config["sensor_num"] = 3
 config["MAX_CACHE_SIZE"] = [10] * config.get("sensor_num")
 config["loss_rate"] = [
-    [0.5, 0.2, 0],
-    [0.5, 0.2, 0.2],
-    [0.5, 0.3, 0.2]
-] 
+    [0.15, 0.05, 0],
+    [0.15, 0.05, 0.05],
+    [0.15, 0.1, 0.05]
+]
 config["MAX_STEPS"] = 100
 config["decision_interval"] = 2
-config["sample_rate"] =  1
+config["sample_rate"] = 1
 
 config["n_actions"] = 2
-config["observation_size"] = 4,
+config["observation_size"] = 3
 config["state_last_action"] = True
