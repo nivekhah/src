@@ -82,6 +82,7 @@ class Sensor(Component):
             receiver.receive_data(data, src_id)
         else:
             receiver.receive_data(0, src_id)
+        # receiver.receive_data(data*(1-loss_rate), src_id)
 
     def receive_data(self, data, src_id):
         if src_id not in self.receiving:

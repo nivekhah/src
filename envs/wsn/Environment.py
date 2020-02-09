@@ -196,3 +196,14 @@ class Environment(MultiAgentEnv):
 
     def save_replay(self):
         print("env::save_replay")
+
+    def print_each_theta(self):
+        sensors_data = [0] * len(self.sensors)
+        for src_id in self.base_station.received:
+            assert isinstance(src_id,int)
+            sensors_data[src_id] += self.base_station.received[src_id]
+        for src_id in self.satellite.received:
+            assert isinstance(src_id, int)
+            sensors_data[src_id] += self.satellite.received[src_id]
+        for index, data in enumerate(sensors_data):
+            print("sensor"+str(index)+"的数据成功传输率为:"+str(data))

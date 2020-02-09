@@ -29,7 +29,7 @@ save_model: False # Save the models to disk
 #控制每隔多少step来保存模型参数，一般为step整数倍
 save_model_interval: 10000 # Save models after this many timesteps
 #加载模型的路径
-checkpoint_path: "" # Load a checkpoint from this path
+checkpoint_path: "/home/zzw/文档/pymarl/results/models/coma__2020-01-15_20-18-00" # Load a checkpoint from this path
 evaluate: False # Evaluate model for test_nepisode episodes and quit (no training)
 load_step: 0 # Load model trained on this many timesteps (0 if choose max possible)
 save_replay: False # Saving the replay of the model loaded from checkpoint_path
