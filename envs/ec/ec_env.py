@@ -1,6 +1,8 @@
 from src.envs.ec.config import config
 from src.envs.ec.component import EdgeServer, TCC
 import numpy as np
+
+
 class ECMA(object):
     def __int__(self):
         self.n_agents = config.get("n_agents")
@@ -12,6 +14,7 @@ class ECMA(object):
     def gen_components(self):
         '''
         初始化edge server和TCC
+
         :return:
         '''
         cl = config.get("cl")
@@ -19,33 +22,26 @@ class ECMA(object):
         self.tcc = TCC(cc)
         self.edge_servers = []
         for i in range(self.n_agents):
-            self.edge_servers.append(EdgeServer(i,cl))
-
-
-
-
-
+            self.edge_servers.append(EdgeServer(i, cl))
 
     def step(self, actions):
         self.cnt += 1
-        T = self.do_actions(actions) ##处理完任务所花费的时间
+        T = self.do_actions(actions)  # 处理完任务所花费的时间
         if self.cnt == self.MAX_STEPS:
             done = True
         else:
             done = False
-        reward = self.sum_d/T
+        reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
         return reward, done, {}
-
 
     def ready_for_next_step(self):
         tasks = self.distribute_task()
         for es in self.edge_servers:
             es.next_step(tasks[es.id])
 
-
-    def do_actions(self,actions):
+    def do_actions(self, actions):
         '''
         执行对应的action，返回相应的处理时间
         :param actions:
@@ -53,7 +49,7 @@ class ECMA(object):
         '''
         T = []
         for es in self.edge_servers:
-            time = es.do_action(actions[es.id],self.tcc)
+            time = es.do_action(actions[es.id], self.tcc)
             T.append(time)
         return np.max(T)
 
@@ -80,7 +76,7 @@ class ECMA(object):
         return np.array(state)
 
     def get_state_size(self):
-        size = self.observation_size*self.n_agents
+        size = self.observation_size * self.n_agents
         return size
 
     def get_avail_actions(self):
@@ -109,7 +105,7 @@ class ECMA(object):
         self.sum_d = sum_d
         task_proportion = config.get("task_proportion")
         for item in task_proportion:
-            tasks.append(sum_d*item)
+            tasks.append(sum_d * item)
         return tasks
 
     def render(self):
