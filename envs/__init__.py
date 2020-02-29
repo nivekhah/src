@@ -14,3 +14,6 @@ if sys.platform == "linux":
                           os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))
 from envs.wsn.Environment import Environment
 REGISTRY["wsn"] = Environment
+
+from src.envs.ec.ec_env import ECMA
+REGISTRY["ec"] = ECMA

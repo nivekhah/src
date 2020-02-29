@@ -6,17 +6,17 @@ import numpy as np
 class ECMA(object):
     def __int__(self):
         self.n_agents = config.get("n_agents")
+        self.gen_components()
         self.n_actions = config.get("n_actions")
         self.observation_size = config.get("observation_size")
         self.MAX_STEPS = config.get("MAX_STEPS")
         self.cnt = 0
 
     def gen_components(self):
-        '''
-        初始化edge server和TCC
-
+        """
+        初始化 edge server和 TCC
         :return:
-        '''
+        """
         cl = config.get("cl")
         cc = config.get("cc")
         self.tcc = TCC(cc)
@@ -42,11 +42,11 @@ class ECMA(object):
             es.next_step(tasks[es.id])
 
     def do_actions(self, actions):
-        '''
-        执行对应的action，返回相应的处理时间
+        """
+        执行对应的 action，返回相应的处理时间
         :param actions:
         :return:
-        '''
+        """
         T = []
         for es in self.edge_servers:
             time = es.do_action(actions[es.id], self.tcc)
@@ -65,10 +65,10 @@ class ECMA(object):
         return self.observation_size
 
     def get_state(self):
-        '''
-        es的任务量及带宽
-        :return:
-        '''
+        """
+        获取环境的全局状态，即将每一个 edge server 的 observation 拼凑起来。
+        :return: 全局状态
+        """
         state = []
         for es in self.edge_servers:
             state.append(es.b)
@@ -76,6 +76,10 @@ class ECMA(object):
         return np.array(state)
 
     def get_state_size(self):
+        """
+        获取全局状态的大小，即全局状态的大小等于每一个 edge server 的 observation 大小的累和。
+        :return: 全局状态的大小
+        """
         size = self.observation_size * self.n_agents
         return size
 

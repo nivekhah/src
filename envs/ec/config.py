@@ -9,3 +9,5 @@ config["n_actions"] = 2
 config["observation_size"] = 2
 config["MAX_STEPS"] = 20
 config["task_proportion"] = [0.2, 0.5, 0.3]
+config["bandwidth"] = [0.9, 0.3, 0.1]
+config["prob"] = [0.2, 0.7, 0.1]

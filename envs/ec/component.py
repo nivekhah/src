@@ -1,4 +1,5 @@
 import numpy as np
+from src.envs.ec.config import config
 
 
 class EdgeServer:
@@ -74,7 +75,12 @@ class EdgeServer:
         return time
 
     def get_available_bandwidth(self):
-        pass
+        bandwidth = config.get("bandwidth")
+        prob = config.get("prob")
+        p = np.random.random.uniform(0, 1)
+        prob.append(p)
+        prob.sort()
+        return bandwidth[prob.index(p)]
 
     def reset(self, d):
         self.next_step(d)
