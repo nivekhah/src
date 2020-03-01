@@ -4,12 +4,13 @@ import numpy as np
 
 
 class ECMA(object):
-    def __int__(self):
+    def __init__(self,seed=None):
         self.n_agents = config.get("n_agents")
         self.gen_components()
         self.n_actions = config.get("n_actions")
         self.observation_size = config.get("observation_size")
         self.MAX_STEPS = config.get("MAX_STEPS")
+        self.episode_limit = self.MAX_STEPS
         self.cnt = 0
 
     def gen_components(self):

@@ -1,6 +1,6 @@
 env: ec
 
 env_args:
-  n_agents
+  seed: null
 
-t_max: 200
+t_max: 2000

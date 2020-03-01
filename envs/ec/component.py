@@ -1,5 +1,6 @@
 import numpy as np
 from src.envs.ec.config import config
+import copy
 
 
 class EdgeServer:
@@ -13,7 +14,7 @@ class EdgeServer:
         self.cl = cl  # 本地计算速度
         self.b = -1  # 带宽
 
-    def do_action(self, action, tcc):  # ？？？？？？？？？？？？ tcc 是否应该通过参数传递？
+    def do_action(self, action, tcc):
         time = 0
         if action == 0:
             time = self.do_local()
@@ -77,10 +78,13 @@ class EdgeServer:
     def get_available_bandwidth(self):
         bandwidth = config.get("bandwidth")
         prob = config.get("prob")
-        p = np.random.random.uniform(0, 1)
-        prob.append(p)
-        prob.sort()
-        return bandwidth[prob.index(p)]
+        p = np.random.uniform(0, 1)
+        copy_prob = copy.deepcopy(prob)
+
+        copy_prob.append(p)
+        copy_prob.sort()
+        # print(prob,copy_prob, p,copy_prob.index(p))
+        return bandwidth[copy_prob.index(p)]
 
     def reset(self, d):
         self.next_step(d)
