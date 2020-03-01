@@ -77,14 +77,15 @@ class EdgeServer:
 
     def get_available_bandwidth(self):
         bandwidth = config.get("bandwidth")
-        prob = config.get("prob")
-        p = np.random.uniform(0, 1)
-        copy_prob = copy.deepcopy(prob)
-
-        copy_prob.append(p)
-        copy_prob.sort()
-        # print(prob,copy_prob, p,copy_prob.index(p))
-        return bandwidth[copy_prob.index(p)]
+        # prob = config.get("prob")
+        # p = np.random.uniform(0,1)
+        # copy_prob = copy.deepcopy(prob)
+        #
+        # copy_prob.append(p)
+        # copy_prob.sort()
+        # return bandwidth[copy_prob.index(p)]
+        a = [1,1,0]
+        return bandwidth[a[self.id]]
 
     def reset(self, d):
         self.next_step(d)
