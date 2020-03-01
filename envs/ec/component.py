@@ -36,15 +36,15 @@ class EdgeServer:
 
     def get_available_bandwidth(self):
         bandwidth = config.get("bandwidth")
-        # prob = config.get("prob")
-        # p = np.random.uniform(0,1)
-        # copy_prob = copy.deepcopy(prob)
-        #
-        # copy_prob.append(p)
-        # copy_prob.sort()
-        # return bandwidth[copy_prob.index(p)]
-        a = [1,1,0]
-        return bandwidth[a[self.id]]
+        prob = config.get("prob")
+        p = np.random.uniform(0,1)
+        copy_prob = copy.deepcopy(prob)
+
+        copy_prob.append(p)
+        copy_prob.sort()
+        return bandwidth[copy_prob.index(p)]
+        # a = [1,1,0]
+        # return bandwidth[a[self.id]]
 
 
 

@@ -3,4 +3,4 @@ env: ec
 env_args:
   seed: null
 
-t_max: 2000
+t_max: 200000

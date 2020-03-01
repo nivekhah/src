@@ -38,6 +38,7 @@ class ECMA(object):
         reward = self.sum_d/T
         if not done:
             self.ready_for_next_step()
+        # print(reward)
         return reward, done, {}
 
 
