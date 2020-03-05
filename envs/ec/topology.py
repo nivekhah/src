@@ -110,15 +110,6 @@ class Topology:
             cov.append(delay_cov)
 
         return cov
-    
-    def get_var(self, d):
-        print(d)
-        mean_value = np.mean(d)
-        print(mean_value)
-        sum = 0
-        for item in d:
-            sum += (item - mean_value)**2
-        print("方差：", sum / len(d))
 
     def cal_phi(self,Y_value,reduced_matrix):
         """
