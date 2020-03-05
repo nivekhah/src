@@ -17,13 +17,13 @@ class Topology:
         [0,1,0,0,0,1]]
         :param monitor_vector 监控节点
         [1,1,0,0,1,1]
-        :param var_vector 链路时延方差向量
+        :param std_vector 链路时延方差向量
         [6, 2, 5, 2, 4]
         """
         self.matrix = matrix
         self.node_matrix = node_matrix
         self.monitor_vector = monitor_vector
-        self.var_vector = var_vector
+        self.std_vector = np.sqrt(var_vector)
         self.proportion = self.get_proportion()
 
     def get_extend_matrix(self):
@@ -87,12 +87,12 @@ class Topology:
 
         # 每条链路依据其自身的时延方差生成 nums_prob 组时延数据
         delay = []
-        for link_var in self.var_vector:
+        for link_std in self.std_vector:
             temp_delay = []
 
             # 对应于每一条链路生成 nums_prob 组时延数据
             for _ in range(nums_prob):
-                temp_delay.append(np.random.normal(0, link_var))
+                temp_delay.append(np.random.normal(0, link_std))
 
             delay.append(temp_delay)
         delay = np.array(delay)
@@ -107,8 +107,8 @@ class Topology:
 
             # 计算时延方差
             delay_cov = np.var(delay_path)
-            cov.append(np.sqrt(delay_cov))
-            
+            cov.append(delay_cov)
+
         return cov
     
     def get_var(self, d):
