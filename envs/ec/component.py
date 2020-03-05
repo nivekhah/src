@@ -1,5 +1,5 @@
 import numpy as np
-from src.envs.ec.config import config
+from envs.ec.config import config
 import copy
 
 

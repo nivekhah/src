@@ -15,5 +15,5 @@ if sys.platform == "linux":
 from envs.wsn.Environment import Environment
 REGISTRY["wsn"] = Environment
 
-from src.envs.ec.ec_env import ECMA
+from envs.ec.ec_env import ECMA
 REGISTRY["ec"] = ECMA

@@ -1,5 +1,5 @@
-from src.envs.ec.config import config
-from src.envs.ec.component import EdgeServer, TCC
+from envs.ec.config import config
+from envs.ec.component import EdgeServer, TCC
 import numpy as np
 
 
