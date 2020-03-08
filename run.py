@@ -17,8 +17,11 @@ from components.transforms import OneHot
 
 from envs.wsn.result_analyzer import reward_result, plot_result
 
-def run(_run, _config, _log):
+import numpy as np
+import copy
 
+
+def run(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
 
@@ -65,7 +68,6 @@ def run(_run, _config, _log):
 
 
 def evaluate_sequential(args, runner):
-
     for _ in range(args.test_nepisode):
         runner.run(test_mode=True)
 
@@ -74,8 +76,8 @@ def evaluate_sequential(args, runner):
 
     runner.close_env()
 
-def run_sequential(args, logger):
 
+def run_sequential(args, logger):
     # Init runner so we can get env info
     runner = r_REGISTRY[args.runner](args=args, logger=logger)
 
@@ -108,6 +110,9 @@ def run_sequential(args, logger):
                           device="cpu" if args.buffer_cpu_only else args.device)
 
     # Setup multiagent controller here
+    # ---------------------------------
+    # 设置 multi-agent controller
+    # ---------------------------------
     mac = mac_REGISTRY[args.mac](buffer.scheme, groups, args)
 
     # Give runner the scheme
@@ -119,11 +124,15 @@ def run_sequential(args, logger):
     if args.use_cuda:
         learner.cuda()
 
+    # -------------------------
+    # 如果 checkpoint_path 不为空，那么需要首先从 checkpoint_path 加载模型
+    # -------------------------
     if args.checkpoint_path != "":
 
         timesteps = []
         timestep_to_load = 0
 
+        #
         if not os.path.isdir(args.checkpoint_path):
             logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
             return
@@ -142,11 +151,23 @@ def run_sequential(args, logger):
             # choose the timestep closest to load_step
             timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
 
+        # ----------------------------
+        # 从本地加载模型
+        # 1. 设置模型路径： args.checkpoint_path 对应 config/default.yaml 中的 checkpoint_path 配置项
+        # 2. 加载模型
+        # ----------------------------
         model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
 
         logger.console_logger.info("Loading model from {}".format(model_path))
         learner.load_models(model_path)
         runner.t_env = timestep_to_load
+
+        # ------------------------------
+        # 如果 default.yaml 中 cal_max_expectation_tasks 参数为 true， 表示需要使用已经训练好的最优模型来进行最大期望任务量的计算，而不进行模型的训练。
+        # ------------------------------
+        if args.cal_max_expectation_tasks:
+            cal_max_expectation_tasks(args, mac, learner, runner)
+            return
 
         if args.evaluate or args.save_replay:
             evaluate_sequential(args, runner)
@@ -197,7 +218,7 @@ def run_sequential(args, logger):
         if args.save_model and (runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
             model_save_time = runner.t_env
             save_path = os.path.join(args.local_results_path, "models", args.unique_token, str(runner.t_env))
-            #"results/models/{}".format(unique_token)
+            # "results/models/{}".format(unique_token)
             os.makedirs(save_path, exist_ok=True)
             logger.console_logger.info("Saving models to {}".format(save_path))
 
@@ -219,7 +240,6 @@ def run_sequential(args, logger):
 
 
 def args_sanity_check(config, _log):
-
     # set CUDA flags
     # config["use_cuda"] = True # Use cuda whenever possible!
     if config["use_cuda"] and not th.cuda.is_available():
@@ -229,6 +249,118 @@ def args_sanity_check(config, _log):
     if config["test_nepisode"] < config["batch_size_run"]:
         config["test_nepisode"] = config["batch_size_run"]
     else:
-        config["test_nepisode"] = (config["test_nepisode"]//config["batch_size_run"]) * config["batch_size_run"]
+        config["test_nepisode"] = (config["test_nepisode"] // config["batch_size_run"]) * config["batch_size_run"]
 
     return config
+
+
+def cal_max_expectation_tasks(args, mac, learner, runner):
+    """
+    :param args:
+    :param mac:
+    :param learner:
+    :param runner:
+    :return:
+    """
+    print("starting to calculate max expectation value of tasks ......")
+    global_state = []
+    global_action = []
+    global_reward = []
+    for i in range(100):
+        episode_batch = runner.run(test_mode=False)
+        episode_data = episode_batch.data.transition_data
+        global_state += get_episode_state(episode_data)
+        global_action += get_episode_action(episode_data)
+        global_reward += get_episode_reward(episode_data)
+
+    mean_reward = 0
+    size_global_state = len(global_state)
+    measure_state, measure_reward = get_measure_state(global_state, global_reward)
+    statistic = statistic_global_state(global_state)
+    measure_reward = measure_reward.tolist()
+    for index, current_state in enumerate(measure_state.tolist()):
+        print("[", current_state, "]: ", statistic[hash(str(current_state))])
+        probability = statistic[hash(str(current_state))] / size_global_state
+        mean_reward += measure_reward[index] * probability
+    print("number of all state: ", len(measure_state))
+    print("mean reward: ", mean_reward)
+
+
+def get_episode_state(episode_data):
+    """
+
+    :return:
+    """
+    global_state = []
+    state = episode_data['state'].detach().numpy().tolist()[0][:-1]
+    for temp in state:
+        mid_res = []
+        for item in temp:
+            mid_res.append(round(item, 5))
+        global_state.append(mid_res)
+    return copy.deepcopy(global_state)
+
+
+def get_episode_action(episode_data):
+    global_action = []
+    actions = episode_data['actions'].detach().numpy().tolist()[0][:-1]
+    for action in actions:
+        mid_res = []
+        for item in action:
+            mid_res.append(item[0])
+        global_action.append(mid_res)
+    return copy.deepcopy(global_action)
+
+
+def get_episode_reward(episode_data):
+    global_reward = []
+    reward = episode_data['reward'].detach().numpy().tolist()[0][:-1]
+    for item in reward:
+        global_reward.append(item[0])
+    return copy.deepcopy(global_reward)
+
+
+def get_measure_state(global_state, global_reward):
+    """
+
+    :param global_state:
+    :param global_reward:
+    :return:
+    """
+    measure_state = []
+    measure_reward = []
+    for index, item in enumerate(global_state):
+        if not is_in_measure_state(measure_state, item):
+            measure_state.append(item)
+            measure_reward.append(global_reward[index])
+    return np.array(measure_state), np.array(measure_reward)
+
+
+def is_in_measure_state(measure_state, item):
+    """
+
+    :param measure_state:
+    :param item:
+    :return:
+    """
+    for state in measure_state:
+        if hash(str(state)) == hash(str(item)):
+            return True
+    return False
+
+
+def statistic_global_state(global_state):
+    """
+
+    :param global_state:
+    :return:
+    """
+    statistic = {}
+    for item in global_state:
+        hashcode = hash(str(item))
+        if hashcode not in statistic:
+            statistic[hashcode] = 1
+        else:
+            count = statistic[hashcode]
+            statistic[hashcode] = (count + 1)
+    return copy.deepcopy(statistic)

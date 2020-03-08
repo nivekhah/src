@@ -21,6 +21,9 @@ class QLearner:
             if args.mixer == "vdn":
                 self.mixer = VDNMixer()
             elif args.mixer == "qmix":
+                # ---------------------
+                # self.mixer 为 Qmixer 网络
+                # ---------------------
                 self.mixer = QMixer(args)
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
