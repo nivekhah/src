@@ -1,6 +1,6 @@
-from envs.multiagentenv import MultiAgentEnv
-from envs.wsn.Component import Satellite, Sensor, BaseStation
-from envs.wsn.Configuration import config
+from src.envs.multiagentenv import MultiAgentEnv
+from src.envs.wsn.Component import Satellite, Sensor, BaseStation
+from src.envs.wsn.Configuration import config
 import numpy as np
 import copy
 

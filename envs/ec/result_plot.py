@@ -10,7 +10,9 @@ def print_data():
 reward = []
 
 def plot_reward():
-    reward = np.loadtxt("/home/zzw/文档/pymarl/reward.txt")
+    # reward = np.loadtxt("/home/zzw/文档/pymarl/reward.txt")
+    print(reward)
+    np.savetxt("reward.txt",reward)
     _max = []
     _mean = []
     _min = []

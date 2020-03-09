@@ -9,7 +9,7 @@
 @contact : zongwang.zhang@outlook.com
 '''
 from abc import ABCMeta, abstractmethod
-from envs.wsn.Configuration import config
+from src.envs.wsn.Configuration import config
 import numpy as np
 import copy
 
