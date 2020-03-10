@@ -29,7 +29,7 @@ class Policy:
                 reward, done, _ = self.__env.step(actions)
                 episode_reward += reward
                 print(reward)
-            self.__episodes_reward = []
+            self.__episodes_reward.append(episode_reward)
 
     def gen_agent(self):
         if self.__policy == "all_offload":
@@ -41,6 +41,10 @@ class Policy:
         elif self.__policy == "random":
             for i in range(self.__n_agents):
                 self.__agents.append(RandomAgent())
+
+    @property
+    def episodes_reward(self):
+        return self.__episodes_reward
 
 
 class AllOffloadAgent:
@@ -74,5 +78,29 @@ class RandomAgent:
 
 if __name__ == '__main__':
     env = ECMA()
-    policy = Policy(env, "random")
-    policy.run(60)
+
+    # ------random---------------
+    policy1 = Policy(env, "random")
+    policy1.run(6000)
+    rewards1 = policy1.episodes_reward
+
+    # -------all_local-------------
+    policy2 = Policy(env, "all_local")
+    policy2.run(6000)
+    rewards2 = policy2.episodes_reward
+
+    # -------all_offload-----------
+    policy3 = Policy(env, "all_offload")
+    policy3.run(6000)
+    rewards3 = policy3.episodes_reward
+
+    import matplotlib.pyplot as plt
+    x = [i for i in range(len(policy1.episodes_reward))]
+    plt.plot(x, rewards1, label="random", marker="*")
+    plt.plot(x, rewards2, label="all_local", marker=">")
+    plt.plot(x, rewards3, label="all_offload", marker="o")
+    plt.title("episode reward of different policy")
+    plt.xlabel("episode")
+    plt.ylabel("reward")
+    plt.legend()
+    plt.show()
