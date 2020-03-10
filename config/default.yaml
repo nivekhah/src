@@ -3,7 +3,7 @@
 # --- pymarl options ---
 runner: "episode" # Runs 1 env for an episode
 mac: "basic_mac" # Basic controller
-env: "sc2" # Environment name
+env: "ec" # Environment name
 env_args: {} # Arguments for the environment
 batch_size_run: 1 # Number of environments to run in parallel
 #控制测试 run的次数，为test_nepisode//batch_size_run
@@ -19,17 +19,18 @@ log_interval: 100 # Log summary of stats after every {} timesteps
 runner_log_interval: 100 # Log runner stats (not test stats) every {} timesteps
 #控制comalearner输出信息的频率，一般为step整数倍
 learner_log_interval: 100 # Log training stats every {} timesteps
-t_max: 100000 # Stop running after this many timesteps
+t_max: 3000 # Stop running after this many timesteps
 use_cuda: True # Use gpu by default unless it isn't available
 buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 
 # --- Logging options ---
 use_tensorboard: True # Log results to tensorboard
-save_model: False # Save the models to disk
+save_model: True # Save the models to disk
 #控制每隔多少step来保存模型参数，一般为step整数倍
 save_model_interval: 10000 # Save models after this many timesteps
 #加载模型的路径
-checkpoint_path: "" # Load a checkpoint from this path
+checkpoint_path: "/home/csyi/pymarl/results/models/qmix__2020-03-07_19-39-19" # Load a checkpoint from this path
+cal_max_expectation_tasks: True  # 表示是否加载已经训练好的模型来计算最大期望任务总量。
 evaluate: False # Evaluate model for test_nepisode episodes and quit (no training)
 load_step: 0 # Load model trained on this many timesteps (0 if choose max possible)
 save_replay: False # Saving the replay of the model loaded from checkpoint_path
@@ -37,8 +38,8 @@ local_results_path: "results" # Path for local results
 
 # --- RL hyperparameters ---
 gamma: 0.99
-batch_size: 32 # Number of episodes to train on
-buffer_size: 32 # Size of the replay buffer
+batch_size: 1 # Number of episodes to train on
+buffer_size: 1 # Size of the replay buffer
 lr: 0.0005 # Learning rate for agents
 critic_lr: 0.0005 # Learning rate for critics
 optim_alpha: 0.99 # RMSProp alpha

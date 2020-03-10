@@ -4,5 +4,5 @@ env: ec
 env_args:
   seed: null
 
-t_max: 100000
+t_max: 60000
 

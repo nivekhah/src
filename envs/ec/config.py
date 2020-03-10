@@ -21,6 +21,7 @@ config["cc"] = 10
 config["sum_d"] = 10
 config["n_actions"] = 2
 config["observation_size"] = 2
+# config["MAX_STEPS"] = 20
 config["MAX_STEPS"] = 20
 # config["task_proportion"] = topo.proportion
 config["task_proportion"] = [0.25,0.25,0.25,0.25]

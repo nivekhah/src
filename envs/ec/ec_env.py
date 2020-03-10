@@ -1,7 +1,10 @@
 from src.envs.ec.config import config
 from src.envs.ec.component import EdgeServer, TCC
 from src.envs.ec.result_plot import reward as all_reward, plot_reward
+
 import numpy as np
+
+
 class ECMA(object):
     def __init__(self,seed=None):
         self.n_agents = config.get("n_agents")
@@ -13,52 +16,43 @@ class ECMA(object):
         self.cnt = 0
 
     def gen_components(self):
-        '''
-        初始化edge server和TCC
+        """
+        初始化 edge server和 TCC
         :return:
-        '''
+        """
         cl = config.get("cl")
         cc = config.get("cc")
         self.tcc = TCC(cc)
         self.edge_servers = []
         for i in range(self.n_agents):
-            self.edge_servers.append(EdgeServer(i,cl))
-
-
-
-
-
+            self.edge_servers.append(EdgeServer(i, cl))
 
     def step(self, actions):
         self.cnt += 1
-        T = self.do_actions(actions) ##处理完任务所花费的时间
+        T = self.do_actions(actions)  # 处理完任务所花费的时间
         if self.cnt == self.MAX_STEPS:
             done = True
         else:
             done = False
-        reward = self.sum_d/T
+        reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
-        # print(reward)
-        all_reward.append(reward)
         return reward, done, {}
-
 
     def ready_for_next_step(self):
         tasks = self.distribute_task()
         for es in self.edge_servers:
             es.next_step(tasks[es.id])
 
-
-    def do_actions(self,actions):
-        '''
-        执行对应的action，返回相应的处理时间
+    def do_actions(self, actions):
+        """
+        执行对应的 action，返回相应的处理时间
         :param actions:
         :return:
-        '''
+        """
         T = []
         for es in self.edge_servers:
-            time = es.do_action(actions[es.id],self.tcc)
+            time = es.do_action(actions[es.id], self.tcc)
             T.append(time)
         return np.max(T)
 
@@ -74,10 +68,10 @@ class ECMA(object):
         return self.observation_size
 
     def get_state(self):
-        '''
-        es的任务量及带宽
-        :return:
-        '''
+        """
+        获取环境的全局状态，即将每一个 edge server 的 observation 拼凑起来。
+        :return: 全局状态
+        """
         state = []
         for es in self.edge_servers:
             state.append(es.b)
@@ -85,7 +79,11 @@ class ECMA(object):
         return np.array(state)
 
     def get_state_size(self):
-        size = self.observation_size*self.n_agents
+        """
+        获取全局状态的大小，即全局状态的大小等于每一个 edge server 的 observation 大小的累和。
+        :return: 全局状态的大小
+        """
+        size = self.observation_size * self.n_agents
         return size
 
     def get_avail_actions(self):
@@ -114,7 +112,7 @@ class ECMA(object):
         self.sum_d = sum_d
         task_proportion = config.get("task_proportion")
         for item in task_proportion:
-            tasks.append(sum_d*item)
+            tasks.append(sum_d * item)
         return tasks
 
     def render(self):
@@ -122,8 +120,6 @@ class ECMA(object):
 
     def close(self):
         print("ec::close")
-        print("画图")
-        plot_reward()
 
     def seed(self):
         print("ec::seed")

@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.linalg import matrix_rank as rank, inv as inverse
+from numpy.linalg import solve
 
 class Topology:
     # 定义topo
@@ -180,6 +181,41 @@ class Topology:
         proportion = self.cal_proportions(Phi,dotY)
         return proportion
 
+    def cal_measured_link_parameter(self,path_cov):
+        """
+        计算测量的路径方差
+        :param path_cov:
+        :return:
+        """
+        assert isinstance(path_cov,list)
+        hatR, hatY = self.get_extend_matrix()
+        dotR, _ = self.matrix_reduction(hatR, hatY)
+        measured_X = solve(dotR,path_cov)
+        return measured_X
+
+def region_error():
+     """
+    画出均匀分布区间和估计误差
+     :return:
+     """
+     regions = [0,2,5,8,12,20] #设定均匀分布的区间长度值
+     center_point = 1 #设置均匀分布的中间值
+     errors = []
+     for region in regions:
+         # 1.均匀分布生成方差
+         var_vector = np.random.uniform(center_point-region/2,center_point+region/2,5)
+        # 2.构建topo
+         measure_matrix = np.array([[1, 0, 1, 1, 0],
+                                    [1, 0, 1, 0, 1],
+                                    [0, 1, 1, 1, 0],
+                                    [0, 1, 1, 0, 1]]) #测量矩阵
+         node_matrix = np.array([[1, 0, 0, 0, 1, 0],
+                                 [1, 0, 0, 0, 0, 1],
+                                 [0, 1, 0, 0, 1, 0],
+                                 [0, 1, 0, 0, 0, 1]])  #节点和路径的关系矩阵
+         monitor_vector = np.array([1, 1, 0, 0, 1, 1]) #监控节点向量
+         topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
+         # 3.生成数据，并且推断
 
 
 

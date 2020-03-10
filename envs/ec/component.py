@@ -1,5 +1,5 @@
 import numpy as np
-from envs.ec.config import config
+from src.envs.ec.config import config
 import copy
 
 
@@ -78,7 +78,7 @@ class EdgeServer:
     def get_available_bandwidth(self):
         bandwidth = config.get("bandwidth")
         prob = config.get("prob")
-        p = np.random.uniform(0,1)
+        p = np.random.uniform(0, 1)
         copy_prob = copy.deepcopy(prob)
 
         copy_prob.append(p)
