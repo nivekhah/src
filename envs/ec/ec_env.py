@@ -1,5 +1,7 @@
-from envs.ec.config import config
-from envs.ec.component import EdgeServer, TCC
+from src.envs.ec.config import config
+from src.envs.ec.component import EdgeServer, TCC
+from src.envs.ec.result_plot import reward as all_reward, plot_reward
+
 import numpy as np
 
 

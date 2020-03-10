@@ -12,8 +12,8 @@ REGISTRY["sc2"] = partial(env_fn, env=StarCraft2Env)
 if sys.platform == "linux":
     os.environ.setdefault("SC2PATH",
                           os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))
-from envs.wsn.Environment import Environment
+from src.envs.wsn.Environment import Environment
 REGISTRY["wsn"] = Environment
 
-from envs.ec.ec_env import ECMA
+from src.envs.ec.ec_env import ECMA
 REGISTRY["ec"] = ECMA
