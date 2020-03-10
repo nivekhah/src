@@ -4,7 +4,7 @@ import numpy as np
 
 
 class ECMA(object):
-    def __init__(self,seed=None):
+    def __init__(self, seed=None):
         self.n_agents = config.get("n_agents")
         self.gen_components()
         self.n_actions = config.get("n_actions")
