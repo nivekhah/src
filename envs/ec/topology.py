@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.linalg import matrix_rank as rank, inv as inverse
 from numpy.linalg import solve
-
+from matplotlib import pyplot as plt
 
 class Topology:
     # 定义topo
@@ -72,7 +72,7 @@ class Topology:
                 dotR = np.row_stack((dotR, hatR[k]))
                 dotY = np.row_stack((dotY, hatY[k]))
             C = np.row_stack((C, k))
-        print(dotR, dotY)
+        # print(dotR, dotY)
         return dotR, dotY
 
     def gen_delay(self, measure_matrix, path_scale, total_nums):
@@ -190,9 +190,7 @@ class Topology:
         :return:
         """
         assert isinstance(path_cov,list)
-        hatR, hatY = self.get_extend_matrix()
-        dotR, _ = self.matrix_reduction(hatR, hatY)
-        measured_X = solve(dotR,path_cov)
+        measured_X = solve(self.reduced_matrix,path_cov)
         return measured_X
 
 def region_error():
@@ -201,6 +199,7 @@ def region_error():
      :return:
      """
      regions = [0,2,4,6,8,10] #设定均匀分布的区间长度值
+     # regions = [10]
      center_point = 5 #设置均匀分布的中间值
      k = 100
      fim_errors = []
@@ -224,14 +223,26 @@ def region_error():
              topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
              # 3.生成数据，并且推断
              #FIM值
-             fim_cov = topo.gen_delay(topo.reduced_matrix,topo.Phi,10000)
+             fim_cov = topo.gen_delay(topo.reduced_matrix,topo.Phi,5000)
+             # print("Phi: ",topo.Phi)
              fim_measured_X = topo.cal_measured_link_parameter(fim_cov)
-             average_cov = topo.gen_delay(topo.reduced_matrix,[0.2,0.2,0.2,0.2,0.2],10000)
+             average_cov = topo.gen_delay(topo.reduced_matrix,[0.2,0.2,0.2,0.2,0.2],5000)
              average_measured_X = topo.cal_measured_link_parameter(average_cov)
-             fim_error += np.array(fim_measured_X)-var_vector
-             average_error += np.array(average_measured_X)-var_vector
-         fim_errors.append(fim_error.sum()/k)
-         average_errors.append(average_error.sum()/k)
+             abs_relative_error1 = np.abs((np.array(fim_measured_X)-var_vector)/var_vector)
+             fim_error += abs_relative_error1
+             abs_relative_error2 = np.abs((np.array(average_measured_X)-var_vector)/var_vector)
+             average_error += abs_relative_error2
+
+         fim_errors.append(fim_error.sum()/(k*fim_error.shape[0]))
+         average_errors.append(average_error.sum()/(k*fim_error.shape[0]))
+     print(fim_errors,average_errors)
+     plt.figure()
+     plt.plot(regions,fim_errors,label="Fim",marker=".",color="black")
+     plt.plot(regions,average_errors,label="Average",marker="o",color="red")
+     plt.legend()
+     # plt.ylim([0,1])
+     plt.show()
+     plt.close()
 
 if __name__ == "__main__":
     # measure_matrix = np.array([[1,0,1,1,0],
