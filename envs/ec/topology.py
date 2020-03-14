@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import time
 import sys
 import os
+from matplotlib import font_manager
 from src.envs.ec.data_processor import DataSaver
 class Topology:
     # 定义topo
@@ -292,7 +293,7 @@ def region_error():
 
                 #计算mse
                 # fim_mse += np.mean((np.array(fim_measured_X) - var_vector)**2)/exp_times
-                fim_mse += np.multiply((np.array(fim_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
+                fim_mse += np.dot((np.array(fim_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
 
                 average_mse += np.mean((np.array(average_measured_X) - var_vector)**2)/exp_times
             fim_MES += fim_mse/n
@@ -370,7 +371,7 @@ def average_optimal():
             cov = topo.gen_delay(topo.reduced_matrix, proportion, sum_data)
             measured_X = topo.cal_measured_link_parameter(cov)
             # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
-            mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+            mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
         y_axis.append(mse)
 
     #画图
@@ -396,9 +397,9 @@ def sum_data_influence():
     parameter = {
         "region":8,
         "center_point":5,
-        "n":100,#生成方差的次数
+        "n":10,#生成方差的次数
         "sum_data_range":[500,2000,5000,10000,50000],
-        "exp_times":100,#测量的重复次数
+        "exp_times":10,#测量的重复次数
     }
     #保存参数
     func_name = sys._getframe().f_code.co_name
@@ -426,7 +427,7 @@ def sum_data_influence():
             for j in range(exp_times):
                 cov = topo.gen_delay(topo.reduced_matrix, optimal_proportion, sum_data)
                 measured_X = topo.cal_measured_link_parameter(cov)
-                mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+                mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
                 # mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
             MSE += mse/n
         y_axis.append(MSE)
@@ -508,7 +509,25 @@ def cdf_mse():
 
 
 
-
+def plot_result():
+    x = [0,1,2,3,4,5,6,7,8,9,10]
+    y = [0.04315833534141526, 0.0435988569870744,0.043925725970413665,0.04300237543732725,0.04314024095026359,0.04347379847806098,
+        0.042743479500658065,0.04233640474616092,0.04202061611765972,0.042920396591611606,0.042868753494841705]
+    font_path = "/usr/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    prop = font_manager.FontProperties(fname=font_path)
+    plt.rcParams["font.family"] = prop.get_name()
+    plt.plot(x, y, label="random", marker="*")
+    # plt.plot(x, all_local_max_expectation, label="all_local", marker=">")
+    # plt.plot(x, all_offload_max_expectation, label="all_offload", marker="o")
+    # plt.plot(x, rl_max_expectation, label="rl", marker="P")
+    plt.title("avarage proportion to FIM proportion", fontsize=10)
+    plt.xlabel("steps", fontsize=10)
+    plt.ylabel("mean MSE", fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.xticks(x, fontsize=10)
+    plt.grid()
+    plt.legend(fontsize=10)
+    plt.show()
 
 
 
