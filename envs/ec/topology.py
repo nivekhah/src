@@ -1,11 +1,26 @@
 import numpy as np
 from numpy.linalg import matrix_rank as rank, inv as inverse
 from numpy.linalg import solve
-
-
+from matplotlib import pyplot as plt
+import time
+import sys
+import os
+from matplotlib import font_manager
+from src.envs.ec.data_processor import DataSaver
 class Topology:
     # 定义topo
-    def __init__(self, matrix, node_matrix, monitor_vector, var_vector):
+    def __init__(self,
+                 var_vector=np.array([5, 5, 5, 5, 5]),
+                 matrix=np.array([[1, 0, 1, 1, 0],
+                               [1, 0, 1, 0, 1],
+                               [0, 1, 1, 1, 0],
+                               [0, 1, 1, 0, 1]]),
+                 node_matrix=np.array([[1, 0, 0, 0, 1, 0],
+                            [1, 0, 0, 0, 0, 1],
+                            [0, 1, 0, 0, 1, 0],
+                            [0, 1, 0, 0, 0, 1]]),
+                 monitor_vector=np.array([1, 1, 0, 0, 1, 1])
+                 ):
         """
         :param matrix 测量矩阵
         [[1,0,1,1,0],
@@ -26,7 +41,9 @@ class Topology:
         self.node_matrix = node_matrix
         self.monitor_vector = monitor_vector
         self.var_vector = var_vector
-        self.proportion = self.get_proportion()
+        # self.proportion = self.get_proportion()
+        self.proportion = self.get_real_proportion()
+        self.H_x = self.get_H_x()
 
     def get_extend_matrix(self):
         """
@@ -183,56 +200,326 @@ class Topology:
         proportion = self.cal_proportions(Phi, dotY)
         return proportion
 
-    def cal_measured_link_parameter(self, path_cov):
+    def get_real_proportion(self):
+        hatR, hatY = self.get_extend_matrix()
+        dotR, dotY = self.matrix_reduction(hatR, hatY)
+        self.reduced_matrix = dotR
+        Y_value = list(np.dot(dotR,self.var_vector))
+        Phi = self.cal_phi(Y_value, dotR)
+        self.Phi = Phi
+        proportion = self.cal_proportions(Phi, dotY)
+        return proportion
+
+    def get_H_x(self):
+        """
+        reduced_matrix =
+        [[0. 0. 1. 0. 0.],
+        [0. 1. 1. 0. 0.],
+        [0. 0. 1. 1. 0.],
+        [0. 0. 1. 0. 1.],
+        [1. 0. 1. 0. 0.]]
+        潘胜利:
+        Y=RX   就是经过 algorithm 1 得到的 R 和Y。
+        Y=RX  ==>   H_x = H_y^{T} R / (sum H_y) 来计算得到。H_y^{T} 是 列向量 H_y 的装置
+
+        潘胜利:
+        H_y 就是 FIM 确定的 各个相关测量数据 所占的比例
+
+        :return:
+        """
+        temp = np.dot(np.array(self.Phi),self.reduced_matrix)/np.sum(np.array(self.Phi))
+        return temp/np.sum(temp)
+
+    def cal_measured_link_parameter(self,path_cov):
         """
         计算测量的路径方差
         :param path_cov:
         :return:
         """
-        assert isinstance(path_cov, list)
-        hatR, hatY = self.get_extend_matrix()
-        dotR, _ = self.matrix_reduction(hatR, hatY)
-        measured_X = solve(dotR, path_cov)
+        assert isinstance(path_cov,list)
+        measured_X = solve(self.reduced_matrix,path_cov)
         return measured_X
 
 
 def region_error():
     """
    画出均匀分布区间和估计误差
+   Fig 1.a 所有的链路的时延方差 服从均匀分布（区间长度从 0 开始；0 区间长度表示所有链路具有相同的时延方差），x-axis：区间的长度，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
+
     :return:
     """
-    regions = [0, 2, 4, 6, 8, 10]  # 设定均匀分布的区间长度值
-    center_point = 5  # 设置均匀分布的中间值
-    k = 100
-    fim_errors = []
-    average_errors = []
+    #参数设置
+    parameter = {
+        "regions":list(range(0,20+2,2)),
+        "start_point":5,
+        "exp_times": 100,  # 测量的重复次数
+        "n": 100,  # 生成方差的次数
+        "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
+        "sum_data": 10000,
+    }
+    # 保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    x_axis = regions = parameter["regions"]  # 设定均匀分布的区间长度值
+    start_point = parameter["start_point"]  # 设置均匀分布的中间值
+    exp_times = parameter["exp_times"]
+    n = parameter["n"]
+    average_proportion = parameter["average_proportion"]
+    # 数据总量
+    sum_data = parameter["sum_data"]
+    y1_axis = []
+    y2_axis = []
     for region in regions:
-        fim_error = np.array([0, 0, 0, 0, 0], dtype=float)
-        average_error = np.array([0, 0, 0, 0, 0], dtype=float)
-        for _ in range(k):
+        fim_MES = 0
+        average_MSE = 0
+        for i in range(n):
             # 1.均匀分布生成方差
-            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
             # 2.构建topo
-            measure_matrix = np.array([[1, 0, 1, 1, 0],
-                                       [1, 0, 1, 0, 1],
-                                       [0, 1, 1, 1, 0],
-                                       [0, 1, 1, 0, 1]])  # 测量矩阵
-            node_matrix = np.array([[1, 0, 0, 0, 1, 0],
-                                    [1, 0, 0, 0, 0, 1],
-                                    [0, 1, 0, 0, 1, 0],
-                                    [0, 1, 0, 0, 0, 1]])  # 节点和路径的关系矩阵
-            monitor_vector = np.array([1, 1, 0, 0, 1, 1])  # 监控节点向量
-            topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
-            # 3.生成数据，并且推断
-            # FIM值
-            fim_cov = topo.gen_delay(topo.reduced_matrix, topo.Phi, 10000)
-            fim_measured_X = topo.cal_measured_link_parameter(fim_cov)
-            average_cov = topo.gen_delay(topo.reduced_matrix, [0.2, 0.2, 0.2, 0.2, 0.2], 10000)
-            average_measured_X = topo.cal_measured_link_parameter(average_cov)
-            fim_error += np.array(fim_measured_X) - var_vector
-            average_error += np.array(average_measured_X) - var_vector
-        fim_errors.append(fim_error.sum() / k)
-        average_errors.append(average_error.sum() / k)
+            topo = Topology(var_vector)
+
+            fim_mse = 0
+            average_mse = 0
+            for j in range(exp_times):
+                # 3.生成数据，并且推断
+                # FIM值
+                fim_cov = topo.gen_delay(topo.reduced_matrix, topo.Phi, sum_data)
+                fim_measured_X = topo.cal_measured_link_parameter(fim_cov)
+                average_cov = topo.gen_delay(topo.reduced_matrix, average_proportion, sum_data)
+                average_measured_X = topo.cal_measured_link_parameter(average_cov)
+
+                #计算mse
+                # fim_mse += np.mean((np.array(fim_measured_X) - var_vector)**2)/exp_times
+                fim_mse += np.dot((np.array(fim_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
+
+                average_mse += np.mean((np.array(average_measured_X) - var_vector)**2)/exp_times
+            fim_MES += fim_mse/n
+            average_MSE += average_mse/n
+        y1_axis.append(fim_MES)
+        y2_axis.append(average_MSE)
+    data_saver.add_item("fim_MSE",y1_axis)
+    data_saver.add_item("average_MSE",y2_axis)
+
+    plt.figure()
+    plt.plot(regions, y1_axis, label="Fim", marker=".", color="black")
+    plt.plot(regions, y2_axis, label="Average", marker="o", color="red")
+    plt.xlabel("scale")
+    plt.ylabel("mse")
+    # plt.ylim([0,1])
+    plt.legend()
+    plt.title("the variation of scale vs MSE")
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.to_file()
+
+
+
+def average_optimal():
+    """
+    按照 Fig 1.a 选定合适的 链路时延方差
+    Fig 1.b x-axis: k 步逼近，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
+
+    最直接的一个方案：分成 k 步来逼近，每步按照  (最优比例-均匀比例)/k  来修正上一步的比例
+    是的哈，按照上面的式子，你肯定最终 是收敛到最优方案的
+    """
+    parameter = {
+        "var_vector": [5,8,16,12,10], #由图1 a中
+        "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
+        "k_step":10,
+        "sum_data":10000,
+        "exp_times":5000
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #计算最优比例
+    var_vector = parameter["var_vector"]
+    topo = Topology(var_vector)
+    optimal_proportion = topo.Phi
+    data_saver.add_item("FIM_proportion",optimal_proportion)
+    #平均比列
+    average_proportion = parameter["average_proportion"]
+    k_step = parameter["k_step"] #分多少次接近最优比列
+    x_axis = list(range(k_step+1))
+    all_proportion = []
+    for i in range(k_step):
+        proportion = np.array(average_proportion) + (np.array(optimal_proportion) - np.array(average_proportion)) / k_step * i
+        all_proportion.append(proportion)
+    all_proportion.append(optimal_proportion)
+    y_axis = []
+    #数据总量
+    sum_data = parameter["sum_data"]
+    exp_times = parameter["exp_times"] #实验重复次数
+    for proportion in all_proportion:
+        mse = 0
+        for _ in range(exp_times):
+            cov = topo.gen_delay(topo.reduced_matrix, proportion, sum_data)
+            measured_X = topo.cal_measured_link_parameter(cov)
+            # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
+            mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+        y_axis.append(mse)
+
+    #画图
+    plt.figure()
+    plt.plot(x_axis,y_axis,marker="o",color="blue")
+    plt.xlabel("step")
+    plt.ylabel("MSE")
+    plt.legend()
+    plt.title("average proportion to FIM proportion")
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis", x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+
+def sum_data_influence():
+    parameter = {
+        "region":8,
+        "start_point":5,
+        "n":100,#生成方差的次数
+        "sum_data_range":[500,2000,5000,10000,50000],
+        "exp_times":100,#测量的重复次数
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #均匀分布的参数
+    region = parameter["region"]
+    start_point = parameter["start_point"]
+    #确定数据量变化的范围
+    x_axis = sum_data_range = parameter["sum_data_range"]
+    #确定产生方差的次数
+    n = parameter["n"]
+    #确定测量重复的次数
+    exp_times = parameter["exp_times"]
+    y_axis = []
+    for sum_data in sum_data_range:
+        MSE = 0
+        for i in range(n):
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
+            #计算最优比例
+            topo = Topology(var_vector)
+            optimal_proportion = topo.Phi
+            #测量
+            mse = 0
+            for j in range(exp_times):
+                cov = topo.gen_delay(topo.reduced_matrix, optimal_proportion, sum_data)
+                measured_X = topo.cal_measured_link_parameter(cov)
+                mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+                # mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
+            MSE += mse/n
+        y_axis.append(MSE)
+    # 画图
+    plt.figure()
+    plt.plot(x_axis, y_axis, marker="o", color="blue")
+    plt.xlabel("#data")
+    plt.ylabel("MSE")
+    plt.title("the influence of #data")
+    plt.legend()
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis",x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+def cdf_mse():
+    """
+    选出Fig 1 中 区间长度为0，中间，最大共3个值：
+    Fig 2,3,4  给出对应的 3副 CDF 统计图 ，x-axis: 估计误差（注意 这里是统计每条链路每一次得到的 估计误差），y-axis:估计误差的累积概率
+    :return:
+    """
+    parameter = {
+        "regions": [0,5,10],
+        "center_point": 5,
+        "n": 1000,  # 生成方差的次数
+        "sum_data": 10000,
+        "exp_times": 100,  # 测量的重复次数
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter",parameter)
+    #均匀分布的参数,0，中间，最大
+    regions = parameter["regions"]
+    center_point = parameter["center_point"]
+    # 确定产生方差的次数
+    n = parameter["n"]
+    # 确定测量重复的次数
+    exp_times = parameter["exp_times"]
+    #产生的总数据量
+    sum_data = parameter["sum_data"]
+    for region in regions:
+        MSE = np.empty(shape=[0,5])
+        for i in range(n):
+            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            #计算最优比例
+            topo = Topology(var_vector)
+            optimal_proportion = topo.Phi
+            #测量
+            mse = np.array([0,0,0,0,0],dtype=float)
+            for j in range(exp_times):
+                cov = topo.gen_delay(topo.reduced_matrix, optimal_proportion, sum_data)
+                measured_X = topo.cal_measured_link_parameter(cov)
+                mse += (np.array(measured_X) - np.array(var_vector)) ** 2 / exp_times
+            MSE = np.row_stack((MSE,mse))
+        MSE_data = MSE.flatten()
+        #画CDF图
+        plt.figure()
+        plt.hist(MSE_data,cumulative=True,normed=True)
+        plt.xlabel("MSE")
+        plt.title("the cdf ("+str(region)+")")
+        plt.legend()
+        dir = os.path.join(os.getcwd(),"data", func_name)
+        fig_name = dir + "/" + func_name +"_"+ str(region)+"_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        plt.savefig(fig_name)
+        plt.show()
+        plt.close()
+        # 对MSE数据进行保存
+        data_saver.add_item(str(region),MSE)
+    data_saver.to_file()
+
+
+
+def plot_result():
+    x = [0,1,2,3,4,5,6,7,8,9,10]
+    y = [0.04315833534141526, 0.0435988569870744,0.043925725970413665,0.04300237543732725,0.04314024095026359,0.04347379847806098,
+        0.042743479500658065,0.04233640474616092,0.04202061611765972,0.042920396591611606,0.042868753494841705]
+    font_path = "/usr/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    prop = font_manager.FontProperties(fname=font_path)
+    plt.rcParams["font.family"] = prop.get_name()
+    plt.plot(x, y, label="random", marker="*")
+    # plt.plot(x, all_local_max_expectation, label="all_local", marker=">")
+    # plt.plot(x, all_offload_max_expectation, label="all_offload", marker="o")
+    # plt.plot(x, rl_max_expectation, label="rl", marker="P")
+    plt.title("avarage proportion to FIM proportion", fontsize=10)
+    plt.xlabel("steps", fontsize=10)
+    plt.ylabel("mean MSE", fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.xticks(x, fontsize=10)
+    plt.grid()
+    plt.legend(fontsize=10)
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -245,7 +532,11 @@ if __name__ == "__main__":
     #     [0,1,0,0,1,0],
     #     [0,1,0,0,0,1]])
     # monitor_vector = np.array([1,1,0,0,1,1])
-    #
+
     # var_vector = [6, 2, 5, 2, 4]
-    # topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
-    region_error()
+    # topo = Topology(var_vector)
+    # region_error()
+    # cdf_mse()
+
+    sum_data_influence()
+    # average_optimal()
