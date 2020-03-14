@@ -1,16 +1,7 @@
 from src.envs.ec.topology import Topology
 import numpy as np
-measure_matrix = np.array([[1, 0, 1, 1, 0],
-                           [1, 0, 1, 0, 1],
-                           [0, 1, 1, 1, 0],
-                           [0, 1, 1, 0, 1]])
-node_matrix = np.array([[1, 0, 0, 0, 1, 0],
-                        [1, 0, 0, 0, 0, 1],
-                        [0, 1, 0, 0, 1, 0],
-                        [0, 1, 0, 0, 0, 1]])
-monitor_vector = np.array([1, 1, 0, 0, 1, 1])
 var_vector = [6, 2, 5, 2, 4]
-topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
+topo = Topology(var_vector)
 
 config = {
 }
