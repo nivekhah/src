@@ -226,7 +226,8 @@ class Topology:
 
         :return:
         """
-        return np.dot(np.array(self.Phi),self.reduced_matrix)/np.sum(np.array(self.Phi))
+        temp = np.dot(np.array(self.Phi),self.reduced_matrix)/np.sum(np.array(self.Phi))
+        return temp/np.sum(temp)
 
     def cal_measured_link_parameter(self,path_cov):
         """
@@ -290,11 +291,10 @@ def region_error():
                 average_measured_X = topo.cal_measured_link_parameter(average_cov)
 
                 #计算mse
-                fim_mse += np.mean((np.array(fim_measured_X) - var_vector)**2)/exp_times
-                # fim_mse += np.multiply((np.array(fim_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
+                # fim_mse += np.mean((np.array(fim_measured_X) - var_vector)**2)/exp_times
+                fim_mse += np.multiply((np.array(fim_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
 
                 average_mse += np.mean((np.array(average_measured_X) - var_vector)**2)/exp_times
-                # average_mse += np.multiply((np.array(average_measured_X) - var_vector) ** 2,topo.H_x) / exp_times
             fim_MES += fim_mse/n
             average_MSE += average_mse/n
         y1_axis.append(fim_MES)
@@ -369,8 +369,8 @@ def average_optimal():
         for _ in range(exp_times):
             cov = topo.gen_delay(topo.reduced_matrix, proportion, sum_data)
             measured_X = topo.cal_measured_link_parameter(cov)
-            mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
-            # mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+            # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
+            mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
         y_axis.append(mse)
 
     #画图
@@ -426,8 +426,8 @@ def sum_data_influence():
             for j in range(exp_times):
                 cov = topo.gen_delay(topo.reduced_matrix, optimal_proportion, sum_data)
                 measured_X = topo.cal_measured_link_parameter(cov)
-                # mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
-                mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
+                mse += np.multiply((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+                # mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
             MSE += mse/n
         y_axis.append(MSE)
     # 画图
@@ -526,8 +526,8 @@ if __name__ == "__main__":
 
     # var_vector = [6, 2, 5, 2, 4]
     # topo = Topology(var_vector)
-    # region_error()
+    region_error()
     # cdf_mse()
 
     # sum_data_influence()
-    average_optimal()
+    # average_optimal()
