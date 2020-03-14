@@ -251,8 +251,8 @@ def region_error():
     """
     #参数设置
     parameter = {
-        "regions":[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        "center_point":5,
+        "regions":list(range(0,20+2,2)),
+        "start_point":5,
         "exp_times": 100,  # 测量的重复次数
         "n": 100,  # 生成方差的次数
         "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
@@ -263,13 +263,12 @@ def region_error():
     data_saver = DataSaver(func_name)
     data_saver.add_item("parameter", parameter)
     x_axis = regions = parameter["regions"]  # 设定均匀分布的区间长度值
-    center_point = parameter["center_point"]  # 设置均匀分布的中间值
+    start_point = parameter["start_point"]  # 设置均匀分布的中间值
     exp_times = parameter["exp_times"]
     n = parameter["n"]
     average_proportion = parameter["average_proportion"]
     # 数据总量
     sum_data = parameter["sum_data"]
-    # bias = []
     y1_axis = []
     y2_axis = []
     for region in regions:
@@ -277,10 +276,10 @@ def region_error():
         average_MSE = 0
         for i in range(n):
             # 1.均匀分布生成方差
-            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
             # 2.构建topo
             topo = Topology(var_vector)
-            # bias.append(np.mean(np.abs((np.array(topo.Phi) - np.array(average_proportion)) / np.array(average_proportion)))/n)
+
             fim_mse = 0
             average_mse = 0
             for j in range(exp_times):
@@ -302,6 +301,7 @@ def region_error():
         y2_axis.append(average_MSE)
     data_saver.add_item("fim_MSE",y1_axis)
     data_saver.add_item("average_MSE",y2_axis)
+
     plt.figure()
     plt.plot(regions, y1_axis, label="Fim", marker=".", color="black")
     plt.plot(regions, y2_axis, label="Average", marker="o", color="red")
@@ -319,13 +319,6 @@ def region_error():
     plt.close()
     data_saver.to_file()
 
-    # plt.figure()
-    # plt.plot(regions, bias, marker=".", label="")
-    # plt.xlabel("scale")
-    # plt.ylabel("bias")
-    # plt.legend()
-    # plt.show()
-    # plt.close()
 
 
 def average_optimal():
@@ -337,7 +330,7 @@ def average_optimal():
     是的哈，按照上面的式子，你肯定最终 是收敛到最优方案的
     """
     parameter = {
-        "var_vector": [5,8,6,2,1], #由图1 a中
+        "var_vector": [5,8,16,12,10], #由图1 a中
         "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
         "k_step":10,
         "sum_data":10000,
@@ -396,10 +389,10 @@ def average_optimal():
 def sum_data_influence():
     parameter = {
         "region":8,
-        "center_point":5,
-        "n":10,#生成方差的次数
+        "start_point":5,
+        "n":100,#生成方差的次数
         "sum_data_range":[500,2000,5000,10000,50000],
-        "exp_times":10,#测量的重复次数
+        "exp_times":100,#测量的重复次数
     }
     #保存参数
     func_name = sys._getframe().f_code.co_name
@@ -407,7 +400,7 @@ def sum_data_influence():
     data_saver.add_item("parameter", parameter)
     #均匀分布的参数
     region = parameter["region"]
-    center_point = parameter["center_point"]
+    start_point = parameter["start_point"]
     #确定数据量变化的范围
     x_axis = sum_data_range = parameter["sum_data_range"]
     #确定产生方差的次数
@@ -418,7 +411,7 @@ def sum_data_influence():
     for sum_data in sum_data_range:
         MSE = 0
         for i in range(n):
-            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
             #计算最优比例
             topo = Topology(var_vector)
             optimal_proportion = topo.Phi
@@ -545,8 +538,8 @@ if __name__ == "__main__":
 
     # var_vector = [6, 2, 5, 2, 4]
     # topo = Topology(var_vector)
-    region_error()
+    # region_error()
     # cdf_mse()
 
-    # sum_data_influence()
+    sum_data_influence()
     # average_optimal()
