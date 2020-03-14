@@ -20,6 +20,8 @@ from envs.wsn.result_analyzer import reward_result, plot_result
 import numpy as np
 import copy
 
+from envs.ec.modify_yaml import ModifyYAML
+
 
 def run(_run, _config, _log):
     # check args sanity
@@ -233,7 +235,7 @@ def run_sequential(args, logger):
             logger.print_recent_stats()
             last_log_T = runner.t_env
 
-    plot_result()
+    # plot_result()
 
     runner.close_env()
     logger.console_logger.info("Finished Training")
@@ -263,10 +265,12 @@ def cal_max_expectation_tasks(args, mac, learner, runner):
     :return:
     """
     print("starting to calculate max expectation value of tasks ......")
+    modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
     global_state = []
     global_action = []
     global_reward = []
-    for i in range(100):
+    episode = int(modify.data["gen_t_max"]/modify.data["env_args"]["max_steps"])
+    for i in range(episode):
         episode_batch = runner.run(test_mode=False)
         episode_data = episode_batch.data.transition_data
         global_state += get_episode_state(episode_data)
@@ -282,15 +286,27 @@ def cal_max_expectation_tasks(args, mac, learner, runner):
         print("[", current_state, "]: ", statistic[hash(str(current_state))])
         probability = statistic[hash(str(current_state))] / size_global_state
         mean_reward += measure_reward[index] * probability
-    print("number of all state: ", len(measure_state))
-    print("mean reward: ", mean_reward)
+    # print("number of all state: ", len(measure_state))
+    # print("mean reward: ", mean_reward)
+    # print("length of state of a episode: ", size_global_state)
+    label = get_label(modify)
+    file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_" + label + ".txt")
+    with open(file_path, "a") as f:
+        f.write(str(mean_reward) + "\n")
+
+
+def get_label(modify):
+    if modify.data["gen_data_cc_cl"] is True:
+        return "cc_cl"
+    elif modify.data["gen_data_light_load"] is True:
+        return "light_load"
+    elif modify.data["gen_data_mid_load"] is True:
+        return "mid_load"
+    elif modify.data["gen_data_weight_load"] is True:
+        return "weight_load"
 
 
 def get_episode_state(episode_data):
-    """
-
-    :return:
-    """
     global_state = []
     state = episode_data['state'].detach().numpy().tolist()[0][:-1]
     for temp in state:
@@ -338,7 +354,7 @@ def get_measure_state(global_state, global_reward):
 
 def is_in_measure_state(measure_state, item):
     """
-
+    判断 item 是否以及存在于 measure_state 中
     :param measure_state:
     :param item:
     :return:
@@ -351,9 +367,9 @@ def is_in_measure_state(measure_state, item):
 
 def statistic_global_state(global_state):
     """
-
-    :param global_state:
-    :return:
+    从保存所有可能的 state 的列表 global_state 中统计每一个全局 state 出现的频数
+    :param global_state: 生成的所有全局 state
+    :return: 统计之后的 dict
     """
     statistic = {}
     for item in global_state:

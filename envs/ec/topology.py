@@ -72,7 +72,7 @@ class Topology:
                 dotR = np.row_stack((dotR, hatR[k]))
                 dotY = np.row_stack((dotY, hatY[k]))
             C = np.row_stack((C, k))
-        print(dotR, dotY)
+        # print(dotR, dotY)
         return dotR, dotY
 
     def gen_delay(self, measure_matrix, path_scale, total_nums):
@@ -183,55 +183,57 @@ class Topology:
         proportion = self.cal_proportions(Phi, dotY)
         return proportion
 
-    def cal_measured_link_parameter(self,path_cov):
+    def cal_measured_link_parameter(self, path_cov):
         """
         计算测量的路径方差
         :param path_cov:
         :return:
         """
-        assert isinstance(path_cov,list)
+        assert isinstance(path_cov, list)
         hatR, hatY = self.get_extend_matrix()
         dotR, _ = self.matrix_reduction(hatR, hatY)
-        measured_X = solve(dotR,path_cov)
+        measured_X = solve(dotR, path_cov)
         return measured_X
 
+
 def region_error():
-     """
-    画出均匀分布区间和估计误差
-     :return:
-     """
-     regions = [0,2,4,6,8,10] #设定均匀分布的区间长度值
-     center_point = 5 #设置均匀分布的中间值
-     k = 100
-     fim_errors = []
-     average_errors = []
-     for region in regions:
-         fim_error = np.array([0,0,0,0,0],dtype=float)
-         average_error = np.array([0,0,0,0,0],dtype=float)
-         for _ in range(k):
-             # 1.均匀分布生成方差
-             var_vector = np.random.uniform(center_point-region/2,center_point+region/2,5)
-             # 2.构建topo
-             measure_matrix = np.array([[1, 0, 1, 1, 0],
-                                        [1, 0, 1, 0, 1],
-                                        [0, 1, 1, 1, 0],
-                                        [0, 1, 1, 0, 1]]) #测量矩阵
-             node_matrix = np.array([[1, 0, 0, 0, 1, 0],
-                                     [1, 0, 0, 0, 0, 1],
-                                     [0, 1, 0, 0, 1, 0],
-                                     [0, 1, 0, 0, 0, 1]])  #节点和路径的关系矩阵
-             monitor_vector = np.array([1, 1, 0, 0, 1, 1]) #监控节点向量
-             topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
-             # 3.生成数据，并且推断
-             #FIM值
-             fim_cov = topo.gen_delay(topo.reduced_matrix,topo.Phi,10000)
-             fim_measured_X = topo.cal_measured_link_parameter(fim_cov)
-             average_cov = topo.gen_delay(topo.reduced_matrix,[0.2,0.2,0.2,0.2,0.2],10000)
-             average_measured_X = topo.cal_measured_link_parameter(average_cov)
-             fim_error += np.array(fim_measured_X)-var_vector
-             average_error += np.array(average_measured_X)-var_vector
-         fim_errors.append(fim_error.sum()/k)
-         average_errors.append(average_error.sum()/k)
+    """
+   画出均匀分布区间和估计误差
+    :return:
+    """
+    regions = [0, 2, 4, 6, 8, 10]  # 设定均匀分布的区间长度值
+    center_point = 5  # 设置均匀分布的中间值
+    k = 100
+    fim_errors = []
+    average_errors = []
+    for region in regions:
+        fim_error = np.array([0, 0, 0, 0, 0], dtype=float)
+        average_error = np.array([0, 0, 0, 0, 0], dtype=float)
+        for _ in range(k):
+            # 1.均匀分布生成方差
+            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            # 2.构建topo
+            measure_matrix = np.array([[1, 0, 1, 1, 0],
+                                       [1, 0, 1, 0, 1],
+                                       [0, 1, 1, 1, 0],
+                                       [0, 1, 1, 0, 1]])  # 测量矩阵
+            node_matrix = np.array([[1, 0, 0, 0, 1, 0],
+                                    [1, 0, 0, 0, 0, 1],
+                                    [0, 1, 0, 0, 1, 0],
+                                    [0, 1, 0, 0, 0, 1]])  # 节点和路径的关系矩阵
+            monitor_vector = np.array([1, 1, 0, 0, 1, 1])  # 监控节点向量
+            topo = Topology(measure_matrix, node_matrix, monitor_vector, var_vector)
+            # 3.生成数据，并且推断
+            # FIM值
+            fim_cov = topo.gen_delay(topo.reduced_matrix, topo.Phi, 10000)
+            fim_measured_X = topo.cal_measured_link_parameter(fim_cov)
+            average_cov = topo.gen_delay(topo.reduced_matrix, [0.2, 0.2, 0.2, 0.2, 0.2], 10000)
+            average_measured_X = topo.cal_measured_link_parameter(average_cov)
+            fim_error += np.array(fim_measured_X) - var_vector
+            average_error += np.array(average_measured_X) - var_vector
+        fim_errors.append(fim_error.sum() / k)
+        average_errors.append(average_error.sum() / k)
+
 
 if __name__ == "__main__":
     # measure_matrix = np.array([[1,0,1,1,0],

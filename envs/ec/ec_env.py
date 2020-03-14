@@ -1,17 +1,35 @@
-from src.envs.ec.config import config
 from src.envs.ec.component import EdgeServer, TCC
-from src.envs.ec.result_plot import reward as all_reward, plot_reward
+from envs.ec.modify_yaml import ModifyYAML
 
 import numpy as np
 
 
 class ECMA(object):
-    def __init__(self, seed=None):
-        self.n_agents = config.get("n_agents")
+    def __init__(self,
+                 seed=None,
+                 max_steps=20,
+                 bandwidth=None,
+                 cc=None,
+                 cl=None,
+                 n_agents=4,
+                 n_actions=2,
+                 observation_size=2,
+                 prob=None,
+                 sum_d=10,
+                 task_proportion=None):
+        self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
+        self.n_agents = n_agents
+        self.bandwidth = bandwidth
+        self.cl = cl
+        self.cc = cc
+        self.prob = prob
+        self.n_actions = n_actions
+        self.observation_size = observation_size
+        self.MAX_STEPS = max_steps
+        self.sum_d = sum_d
+        self.task_proportion = task_proportion
+
         self.gen_components()
-        self.n_actions = config.get("n_actions")
-        self.observation_size = config.get("observation_size")
-        self.MAX_STEPS = config.get("MAX_STEPS")
         self.episode_limit = self.MAX_STEPS
         self.cnt = 0
 
@@ -20,12 +38,10 @@ class ECMA(object):
         初始化 edge server和 TCC
         :return:
         """
-        cl = config.get("cl")
-        cc = config.get("cc")
-        self.tcc = TCC(cc)
+        self.tcc = TCC(self.cc)
         self.edge_servers = []
         for i in range(self.n_agents):
-            self.edge_servers.append(EdgeServer(i, cl))
+            self.edge_servers.append(EdgeServer(i, self.cl, self.prob, self.bandwidth))
 
     def step(self, actions):
         self.cnt += 1
@@ -108,11 +124,8 @@ class ECMA(object):
 
     def distribute_task(self):
         tasks = []
-        sum_d = config.get("sum_d")
-        self.sum_d = sum_d
-        task_proportion = config.get("task_proportion")
-        for item in task_proportion:
-            tasks.append(sum_d * item)
+        for item in self.task_proportion:
+            tasks.append(self.sum_d * item)
         return tasks
 
     def render(self):
