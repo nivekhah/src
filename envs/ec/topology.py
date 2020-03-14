@@ -449,8 +449,8 @@ def cdf_mse():
     :return:
     """
     parameter = {
-        "regions": [0,5,10],
-        "center_point": 5,
+        "regions": [0,10,20],
+        "start_point": 5,
         "n": 1000,  # 生成方差的次数
         "sum_data": 10000,
         "exp_times": 100,  # 测量的重复次数
@@ -461,7 +461,7 @@ def cdf_mse():
     data_saver.add_item("parameter",parameter)
     #均匀分布的参数,0，中间，最大
     regions = parameter["regions"]
-    center_point = parameter["center_point"]
+    start_point = parameter["start_point"]
     # 确定产生方差的次数
     n = parameter["n"]
     # 确定测量重复的次数
@@ -471,7 +471,7 @@ def cdf_mse():
     for region in regions:
         MSE = np.empty(shape=[0,5])
         for i in range(n):
-            var_vector = np.random.uniform(center_point - region / 2, center_point + region / 2, 5)
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
             #计算最优比例
             topo = Topology(var_vector)
             optimal_proportion = topo.Phi
@@ -539,7 +539,7 @@ if __name__ == "__main__":
     # var_vector = [6, 2, 5, 2, 4]
     # topo = Topology(var_vector)
     # region_error()
-    # cdf_mse()
+    cdf_mse()
 
-    sum_data_influence()
+    # sum_data_influence()
     # average_optimal()
