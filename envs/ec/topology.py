@@ -247,7 +247,6 @@ class Topology:
 def region_error():
     """
    画出均匀分布区间和估计误差
-
    Fig 1.a 所有的链路的时延方差 服从均匀分布（区间长度从 0 开始；0 区间长度表示所有链路具有相同的时延方差），x-axis：区间的长度，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
 
     :return:
@@ -460,9 +459,9 @@ def cdf_mse():
     :return:
     """
     parameter = {
-        "regions": [20],
+        "regions": [0,10,20],
         "start_point": 5,
-        "n": 10,  # 生成方差的次数
+        "n": 2000,  # 生成方差的次数
         "sum_data": 10000,
         "exp_times": 100,  # 测量的重复次数
     }
@@ -513,32 +512,6 @@ def cdf_mse():
 
 
 
-def plot_result():
-    x = [0,1,2,3,4,5,6,7,8,9,10]
-    y = [0.04315833534141526, 0.0435988569870744,0.043925725970413665,0.04300237543732725,0.04314024095026359,0.04347379847806098,
-        0.042743479500658065,0.04233640474616092,0.04202061611765972,0.042920396591611606,0.042868753494841705]
-    plt.plot(x, y, label="random", marker="*")
-    # plt.plot(x, all_local_max_expectation, label="all_local", marker=">")
-    # plt.plot(x, all_offload_max_expectation, label="all_offload", marker="o")
-    # plt.plot(x, rl_max_expectation, label="rl", marker="P")
-    plt.title("avarage proportion to FIM proportion", fontsize=10)
-    plt.xlabel("steps", fontsize=10)
-    plt.ylabel("mean MSE", fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.xticks(x, fontsize=10)
-    plt.grid()
-    plt.legend(fontsize=10)
-    plt.show()
-
-def plot_cdf():
-    x1 = np.random.normal(0,1,1000)
-    x2 = np.random.normal(3,20,1000)
-    plt.figure()
-    plt.hist(x1,bins=20,cumulative=True,normed=True)
-    plt.hist(x2, bins=20, cumulative=True, normed=True)
-    plt.xlim([-500,500])
-    plt.show()
-
 
 if __name__ == "__main__":
     # measure_matrix = np.array([[1,0,1,1,0],
@@ -558,4 +531,3 @@ if __name__ == "__main__":
 
     # sum_data_influence()
     # average_optimal()
-    # plot_cdf()

@@ -4,7 +4,7 @@ import copy
 
 
 class EdgeServer:
-    def __init__(self, id: int, cl):
+    def __init__(self, id: int, cl, prob, bandwidth):
         """
         :param id: edge server 的编号
         :param cl: edge server 的计算速度
@@ -13,6 +13,8 @@ class EdgeServer:
         self.d = -1  # 初始化任务量为 0
         self.cl = cl  # 本地计算速度
         self.b = -1  # 带宽
+        self.prob = prob
+        self.bandwidth = bandwidth
 
     def do_action(self, action, tcc):
         time = 0
@@ -76,14 +78,12 @@ class EdgeServer:
         return time
 
     def get_available_bandwidth(self):
-        bandwidth = config.get("bandwidth")
-        prob = config.get("prob")
         p = np.random.uniform(0, 1)
-        copy_prob = copy.deepcopy(prob)
+        copy_prob = copy.deepcopy(self.prob)
 
         copy_prob.append(p)
         copy_prob.sort()
-        return bandwidth[copy_prob.index(p)]
+        return self.bandwidth[copy_prob.index(p)]
         # a = [1,1,0]
         # return bandwidth[a[self.id]]
 

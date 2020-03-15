@@ -1,5 +1,10 @@
-from envs.ec.ec_env import ECMA
+from src.envs.ec.ec_env import ECMA
 import numpy as np
+import copy
+
+"""
+Policy 类包括三种算法： 随机算法， 全部 local， 全部 offload
+"""
 
 
 class Policy:
@@ -10,6 +15,9 @@ class Policy:
         self.__agents = []
         self.__n_agents = env.n_agents
         self.__policy = policy
+        self.__reward_list = []
+        self.__state_list = []
+        self.__action_list = []
 
         self.gen_agent()
 
@@ -19,17 +27,62 @@ class Policy:
             self.__env.reset()
             episode_reward = 0
             for j in range(self.__env.MAX_STEPS):
-                self.__env.get_state()
+                state = self.__env.get_state()
+                self.__state_list.append(state)
                 self.__env.get_obs()
 
                 actions = []
                 for agent in self.__agents:
                     action = agent.select_action()
                     actions.append(action)
+                self.__action_list.append(actions)
                 reward, done, _ = self.__env.step(actions)
+                if self.__policy is "all_offload":
+                    print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
+                self.__reward_list.append(reward)
                 episode_reward += reward
-                print(reward)
             self.__episodes_reward.append(episode_reward)
+
+    def cal_max_expectation(self):
+        measure_state, measure_reward = self.__get_measure_state_reward()
+
+        # if self.__policy is "all_offload":
+        #     for index, item in enumerate(measure_state):
+        #         print("state: ", item)
+        #         print("reward: ", measure_reward[index])
+
+        statistic = self.__statistic_global_state()
+        length = len(self.__state_list)
+        reward = 0
+        for index, state in enumerate(measure_state):
+            probability = statistic[str(state)] / length
+            reward += probability * measure_reward[index]
+        return reward
+
+    def __get_measure_state_reward(self):
+        measure_state = []
+        measure_reward = []
+        for index, state in enumerate(self.__state_list):
+            if not self.__is_in_measure_state(measure_state, state):
+                measure_state.append(state)
+                measure_reward.append(self.__reward_list[index])
+        return copy.deepcopy(measure_state), copy.deepcopy(measure_reward)
+
+    @staticmethod
+    def __is_in_measure_state(measure_state, state):
+        for s in measure_state:
+            if hash(str(s)) == hash(str(state)):
+                return True
+        return False
+
+    def __statistic_global_state(self):
+        statistic = {}
+        for state in self.__state_list:
+            if str(state) not in statistic.keys():
+                statistic[str(state)] = 1
+            else:
+                statistic[str(state)] = statistic[str(state)] + 1
+        return copy.deepcopy(statistic)
 
     def gen_agent(self):
         if self.__policy == "all_offload":
@@ -78,29 +131,5 @@ class RandomAgent:
 
 if __name__ == '__main__':
     env = ECMA()
-
-    # ------random---------------
-    policy1 = Policy(env, "random")
-    policy1.run(6000)
-    rewards1 = policy1.episodes_reward
-
-    # -------all_local-------------
-    policy2 = Policy(env, "all_local")
-    policy2.run(6000)
-    rewards2 = policy2.episodes_reward
-
-    # -------all_offload-----------
-    policy3 = Policy(env, "all_offload")
-    policy3.run(6000)
-    rewards3 = policy3.episodes_reward
-
-    import matplotlib.pyplot as plt
-    x = [i for i in range(len(policy1.episodes_reward))]
-    plt.plot(x, rewards1, label="random", marker="*")
-    plt.plot(x, rewards2, label="all_local", marker=">")
-    plt.plot(x, rewards3, label="all_offload", marker="o")
-    plt.title("episode reward of different policy")
-    plt.xlabel("episode")
-    plt.ylabel("reward")
-    plt.legend()
-    plt.show()
+    policy = Policy(env, "all_offload")
+    policy.run(100)
