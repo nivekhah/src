@@ -12,7 +12,7 @@ env_args:
   n_actions: 2
   n_agents: 4
   observation_size: 2
-  prob: [0.0, 0, 1]
+  prob: [0.0, 1.0, 1]
   seed: null
   sum_d: 10
   task_proportion: [0.25, 0.25, 0.25, 0.25]
@@ -31,10 +31,12 @@ mid_load_checkpoint_path: [qmix__2020-03-14_14-21-20, qmix__2020-03-14_14-25-33,
   qmix__2020-03-14_14-45-49, qmix__2020-03-14_14-49-52, qmix__2020-03-14_14-54-07,
   qmix__2020-03-14_14-58-13, qmix__2020-03-14_15-02-14]
 mid_load_prob: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-plot_cc_cl_scale: false
+plot_cc_cl_scale: true
 plot_light_load: false
 plot_mid_load: false
-plot_weight_load: true
+plot_reward: false
+plot_weight_load: false
+reward_path: /home/csyi/pymarl/results/sacred/76/info.json
 t_max: 80000
 train_cc_cl_scale: false
 train_light_load_prob: false

@@ -37,13 +37,20 @@ class Policy:
                     actions.append(action)
                 self.__action_list.append(actions)
                 reward, done, _ = self.__env.step(actions)
-                # print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
+                if self.__policy is "all_offload":
+                    print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
                 self.__reward_list.append(reward)
                 episode_reward += reward
             self.__episodes_reward.append(episode_reward)
 
     def cal_max_expectation(self):
         measure_state, measure_reward = self.__get_measure_state_reward()
+
+        # if self.__policy is "all_offload":
+        #     for index, item in enumerate(measure_state):
+        #         print("state: ", item)
+        #         print("reward: ", measure_reward[index])
+
         statistic = self.__statistic_global_state()
         length = len(self.__state_list)
         reward = 0
@@ -120,3 +127,9 @@ class RandomAgent:
     @staticmethod
     def select_action():
         return np.random.randint(0, 2)
+
+
+if __name__ == '__main__':
+    env = ECMA()
+    policy = Policy(env, "all_offload")
+    policy.run(100)

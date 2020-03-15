@@ -6,6 +6,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
+from matplotlib import rc
 import copy
 
 
@@ -160,6 +161,7 @@ def gen_data_mid_load(modify):
     checkpoint_path = data["mid_load_checkpoint_path"]
     for index, p in enumerate(prob):
         data["env_args"]["prob"] = get_mid_load_prob(p)
+        print("带宽概率： ", data["env_args"]["prob"])
         modify.dump()
 
         write_gen_default_config(checkpoint_path[index])
@@ -283,7 +285,7 @@ def plot_scale():
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, r"$C_c / C_l$", r"$normalized \, \psi$", png_file_path, eps_file_path)
+         rl_max_expectation, r"$C_c / C_l$", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
 
 
 def plot_light_load():
@@ -295,7 +297,7 @@ def plot_light_load():
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, " probability of light load", r"$normalized \, \psi$", png_file_path, eps_file_path)
+         rl_max_expectation, " probability of light load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
 
 
 def plot_mid_load():
@@ -304,10 +306,10 @@ def plot_mid_load():
         flag)
 
     x = ModifyYAML(get_ec_config_file_path()).data["mid_load_prob"]
-    png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "mid_load.png")
-    eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "mid_load.eps")
+    png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.png")
+    eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, "probability of moderate load", r"$normalized \, \psi$", png_file_path, eps_file_path)
+         rl_max_expectation, "probability of moderate load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
 
 
 def plot_weight_load():
@@ -316,10 +318,10 @@ def plot_weight_load():
         flag)
 
     x = ModifyYAML(get_ec_config_file_path()).data["light_load_prob"]
-    png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "weight_load.png")
-    eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "weight_load.eps")
+    png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.png")
+    eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, "probability of weight load", r"$normalized \, \psi$", png_file_path, eps_file_path)
+         rl_max_expectation, "probability of heavy load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
 
 
 def plot(x, random_mean_reward,
@@ -333,20 +335,49 @@ def plot(x, random_mean_reward,
     font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
     prop = font_manager.FontProperties(fname=font_path)
     plt.rcParams["font.family"] = prop.get_name()
-    plt.plot(x, rl_max_expectation, "ro-", label="rl", linewidth=3,
+    # rc('text', usetex=True)
+    plt.figure(figsize=(8, 6))
+    plt.plot(x, rl_max_expectation, "ro-", label="QMIX", linewidth=3,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=10)
     plt.plot(x, random_mean_reward, "cs--", label="random", linewidth=2,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
-    plt.plot(x, all_local_max_expectation, "gx--", label="all_local", linewidth=2,
+    plt.plot(x, all_local_max_expectation, "gx--", label="all local", linewidth=2,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
-    plt.plot(x, all_offload_max_expectation, "yd--", label="all_offload", linewidth=2,
+    plt.plot(x, all_offload_max_expectation, "yd--", label="all offload", linewidth=2,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
-    plt.xlabel(x_label, fontsize=10)
-    plt.ylabel(y_label, fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.xticks(x, fontsize=10)
+    plt.xlabel(x_label, fontsize=12)
+    plt.ylabel(y_label, fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.xticks(x, fontsize=12)
     plt.grid()
-    plt.legend(fontsize=10)
+    plt.legend(fontsize=12)
+    plt.savefig(png_file_path, format="png")
+    plt.savefig(eps_file_path, format="eps")
+    plt.show()
+
+
+def plot_reward(reward_path):
+    import json
+
+    with open(reward_path, 'r') as f:
+        reward = np.array(list(json.load(f)["return_mean"]))
+        max_reward = np.max(reward)
+        normal_reward = np.divide(reward, max_reward)
+
+    font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    prop = font_manager.FontProperties(fname=font_path)
+    plt.rcParams["font.family"] = prop.get_name()
+    # x = [i for i in range(len(normal_reward))]
+    plt.figure(figsize=(8, 6))
+    plt.plot(normal_reward, 'r')
+    plt.xlabel(r"time step ($10^2$)", fontsize=12)
+    plt.ylabel("normalized $r$", fontsize=12)
+    plt.yticks(fontsize=12)
+    # plt.xticks(x, fontsize=10)
+    plt.xticks(fontsize=12)
+    plt.grid()
+    png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.png")
+    eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.eps")
     plt.savefig(png_file_path, format="png")
     plt.savefig(eps_file_path, format="eps")
     plt.show()
@@ -435,3 +466,6 @@ if __name__ == '__main__':
 
     if ec_modify.data["plot_weight_load"] is True:
         plot_weight_load()
+
+    if ec_modify.data["plot_reward"] is True:
+        plot_reward(ec_modify.data["reward_path"])

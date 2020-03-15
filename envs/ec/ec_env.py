@@ -8,15 +8,15 @@ class ECMA(object):
     def __init__(self,
                  seed=None,
                  max_steps=20,
-                 bandwidth=None,
-                 cc=None,
-                 cl=None,
+                 bandwidth=[2, 1, 0.1],
+                 cc=10,
+                 cl=1,
                  n_agents=4,
                  n_actions=2,
                  observation_size=2,
-                 prob=None,
+                 prob=[0.2, 0.8, 1],
                  sum_d=10,
-                 task_proportion=None):
+                 task_proportion=[0.25, 0.25, 0.25, 0.25]):
         self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
         self.n_agents = n_agents
         self.bandwidth = bandwidth
@@ -53,6 +53,7 @@ class ECMA(object):
         reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
+        print(reward)
         return reward, done, {}
 
     def ready_for_next_step(self):
