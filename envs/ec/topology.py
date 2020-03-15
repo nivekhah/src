@@ -7,6 +7,9 @@ import sys
 import os
 from matplotlib import font_manager
 from src.envs.ec.data_processor import DataSaver
+font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+prop = font_manager.FontProperties(fname=font_path)
+plt.rcParams["font.family"] = prop.get_name()
 class Topology:
     # 定义topo
     def __init__(self,
@@ -304,12 +307,12 @@ def region_error():
 
     plt.figure()
     plt.plot(regions, y1_axis, label="Fim", marker=".", color="black")
-    plt.plot(regions, y2_axis, label="Average", marker="o", color="red")
-    plt.xlabel("scale")
-    plt.ylabel("mse")
+    plt.plot(regions, y2_axis, label="Uniform", marker="o", color="red")
+    plt.xlabel(r"scale of $\theta$")
+    plt.ylabel("mean MSE")
     # plt.ylim([0,1])
     plt.legend()
-    plt.title("the variation of scale vs MSE")
+    # plt.title("the variation of scale vs MSE")
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
     if not os.path.exists(dir):
@@ -334,7 +337,7 @@ def average_optimal():
         "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
         "k_step":10,
         "sum_data":10000,
-        "exp_times":5000
+        "exp_times":100
     }
     #保存参数
     func_name = sys._getframe().f_code.co_name
@@ -354,26 +357,33 @@ def average_optimal():
         proportion = np.array(average_proportion) + (np.array(optimal_proportion) - np.array(average_proportion)) / k_step * i
         all_proportion.append(proportion)
     all_proportion.append(optimal_proportion)
+    #这里各个链路占的比例应该也从平均比例变化到H_x
+    H_x_proportions = []
+    for i in range(k_step):
+        H_x_proportions.append(np.array(average_proportion)+(np.array(topo.H_x)-np.array(average_proportion))/k_step*i)
+    H_x_proportions.append(topo.H_x)
+    data_saver.add_item("data_proportion",all_proportion)
+    data_saver.add_item("H_x_proportions",H_x_proportions)
     y_axis = []
     #数据总量
     sum_data = parameter["sum_data"]
     exp_times = parameter["exp_times"] #实验重复次数
-    for proportion in all_proportion:
+    for index,proportion in enumerate(all_proportion):
         mse = 0
         for _ in range(exp_times):
             cov = topo.gen_delay(topo.reduced_matrix, proportion, sum_data)
             measured_X = topo.cal_measured_link_parameter(cov)
             # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
-            mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+            mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,H_x_proportions[index]) / exp_times
         y_axis.append(mse)
 
     #画图
     plt.figure()
     plt.plot(x_axis,y_axis,marker="o",color="blue")
-    plt.xlabel("step")
-    plt.ylabel("MSE")
+    plt.xlabel("steps")
+    plt.ylabel("mean MSE")
     plt.legend()
-    plt.title("average proportion to FIM proportion")
+    # plt.title("average proportion to FIM proportion")
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
     if not os.path.exists(dir):
@@ -386,12 +396,13 @@ def average_optimal():
     data_saver.to_file()
 
 
+
 def sum_data_influence():
     parameter = {
         "region":8,
         "start_point":5,
         "n":100,#生成方差的次数
-        "sum_data_range":[500,2000,5000,10000,50000],
+        "sum_data_range":list(range(1000,2000,21000)),
         "exp_times":100,#测量的重复次数
     }
     #保存参数
@@ -427,9 +438,9 @@ def sum_data_influence():
     # 画图
     plt.figure()
     plt.plot(x_axis, y_axis, marker="o", color="blue")
-    plt.xlabel("#data")
-    plt.ylabel("MSE")
-    plt.title("the influence of #data")
+    plt.xlabel("#probe")
+    plt.ylabel("mean MSE")
+    # plt.title("the influence of #probe")
     plt.legend()
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
@@ -449,9 +460,9 @@ def cdf_mse():
     :return:
     """
     parameter = {
-        "regions": [0,10,20],
+        "regions": [20],
         "start_point": 5,
-        "n": 1000,  # 生成方差的次数
+        "n": 10,  # 生成方差的次数
         "sum_data": 10000,
         "exp_times": 100,  # 测量的重复次数
     }
@@ -506,9 +517,6 @@ def plot_result():
     x = [0,1,2,3,4,5,6,7,8,9,10]
     y = [0.04315833534141526, 0.0435988569870744,0.043925725970413665,0.04300237543732725,0.04314024095026359,0.04347379847806098,
         0.042743479500658065,0.04233640474616092,0.04202061611765972,0.042920396591611606,0.042868753494841705]
-    font_path = "/usr/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
-    prop = font_manager.FontProperties(fname=font_path)
-    plt.rcParams["font.family"] = prop.get_name()
     plt.plot(x, y, label="random", marker="*")
     # plt.plot(x, all_local_max_expectation, label="all_local", marker=">")
     # plt.plot(x, all_offload_max_expectation, label="all_offload", marker="o")
@@ -522,7 +530,14 @@ def plot_result():
     plt.legend(fontsize=10)
     plt.show()
 
-
+def plot_cdf():
+    x1 = np.random.normal(0,1,1000)
+    x2 = np.random.normal(3,20,1000)
+    plt.figure()
+    plt.hist(x1,bins=20,cumulative=True,normed=True)
+    plt.hist(x2, bins=20, cumulative=True, normed=True)
+    plt.xlim([-500,500])
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -543,3 +558,4 @@ if __name__ == "__main__":
 
     # sum_data_influence()
     # average_optimal()
+    # plot_cdf()
