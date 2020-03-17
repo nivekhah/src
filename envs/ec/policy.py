@@ -22,6 +22,8 @@ class Policy:
         self.gen_agent()
 
     def run(self, t_max):
+        temp_dict = {}
+
         episodes = int(t_max / self.__env.MAX_STEPS)
         for i in range(episodes):
             self.__env.reset()
@@ -37,11 +39,24 @@ class Policy:
                     actions.append(action)
                 self.__action_list.append(actions)
                 reward, done, _ = self.__env.step(actions)
-                if self.__policy is "all_offload":
-                    print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
+
+                if reward in temp_dict.keys():
+                    count = temp_dict[reward]
+                    temp_dict[reward] = count + 1
+                else:
+                    temp_dict[reward] = 1
+                # if reward != (10/2.5) and reward != (10/25.25) and reward != (10/2.75) and reward != (10/1.5):
+                #     print("异常 reward: ", reward)
+                # print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
                 self.__reward_list.append(reward)
                 episode_reward += reward
             self.__episodes_reward.append(episode_reward)
+
+        expectation = 0
+        for key in temp_dict.keys():
+            probability = temp_dict[key] / t_max
+            expectation += float(key)*probability
+        print(temp_dict, "期望值：", expectation)
 
     def cal_max_expectation(self):
         measure_state, measure_reward = self.__get_measure_state_reward()
@@ -50,6 +65,7 @@ class Policy:
         #     for index, item in enumerate(measure_state):
         #         print("state: ", item)
         #         print("reward: ", measure_reward[index])
+        #     print("measure state length: ", len(measure_state))
 
         statistic = self.__statistic_global_state()
         length = len(self.__state_list)
@@ -130,6 +146,14 @@ class RandomAgent:
 
 
 if __name__ == '__main__':
-    env = ECMA()
-    policy = Policy(env, "all_offload")
-    policy.run(100)
+    # prob = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    prob = [0]
+    from myrun import get_mid_load_prob
+
+    for item in prob:
+        p = get_mid_load_prob(item)
+        print("带宽概率为：", p)
+        env = ECMA(prob=p)
+        policy = Policy(env, "random")
+        policy.run(60000)
+        policy.cal_max_expectation()

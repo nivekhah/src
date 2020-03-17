@@ -46,6 +46,7 @@ class ECMA(object):
     def step(self, actions):
         self.cnt += 1
         T = self.do_actions(actions)  # 处理完任务所花费的时间
+        # print("处理完任务所花的总时间", T)
         if self.cnt == self.MAX_STEPS:
             done = True
         else:
@@ -53,7 +54,7 @@ class ECMA(object):
         reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
-        print(reward)
+        # print(reward)
         return reward, done, {}
 
     def ready_for_next_step(self):
@@ -70,6 +71,7 @@ class ECMA(object):
         T = []
         for es in self.edge_servers:
             time = es.do_action(actions[es.id], self.tcc)
+            # print("执行动作: ", actions[es.id], "所发费的时间为", time)
             T.append(time)
         return np.max(T)
 

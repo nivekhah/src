@@ -14,6 +14,7 @@ from runners import REGISTRY as r_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
+import pandas as pd
 
 from envs.wsn.result_analyzer import reward_result, plot_result
 
@@ -186,10 +187,14 @@ def run_sequential(args, logger):
 
     logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
 
+    global_reward = []
+
     while runner.t_env <= args.t_max:
 
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
+
+        global_reward += get_episode_reward(episode_batch.data.transition_data)  # 将每一个 step 的 reward 都记录下来
 
         buffer.insert_episode_batch(episode_batch)
 
@@ -237,6 +242,8 @@ def run_sequential(args, logger):
             last_log_T = runner.t_env
 
     runner.close_env()
+    file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
+    np.savetxt(file_path, global_reward)
     logger.console_logger.info("Finished Training")
 
 
@@ -288,6 +295,17 @@ def cal_max_expectation_tasks(args, mac, learner, runner):
     # print("number of all state: ", len(measure_state))
     # print("mean reward: ", mean_reward)
     # print("length of state of a episode: ", size_global_state)
+
+    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
+
+    data = {
+        "state": global_state,
+        "action": global_action,
+        "reward": global_reward
+    }
+    data = pd.DataFrame(data)
+    data.to_csv(state_path)
+
     label = get_label(modify)
     file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_" + label + ".txt")
     with open(file_path, "a") as f:

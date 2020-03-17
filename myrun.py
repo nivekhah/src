@@ -38,11 +38,7 @@ def light_load_prob(modify):
     data = modify.data
     probs = data["light_load_prob"]
     for p in probs:
-        prob = list()
-        prob.append(p)
-        prob.append(round((p + (1 - p) / 2), 2))
-        prob.append(1)
-        data["env_args"]["prob"] = prob
+        data["env_args"]["prob"] = get_light_load_prob(p)
         modify.dump()
 
         my_main()
@@ -59,12 +55,7 @@ def mid_load_prob(modify):
     data = modify.data
     probs = data["mid_load_prob"]
     for p in probs:
-        prob = list()
-        prob.append(round((1 - p) / 2, 2))
-        prob.append(round(((1 - p) / 2) + p, 2))
-        prob.append(1)
-        print("带宽分配概率： ", prob)
-        data["env_args"]["prob"] = prob
+        data["env_args"]["prob"] = get_mid_load_prob(p)
         modify.dump()
 
         my_main()
@@ -81,12 +72,7 @@ def weight_load_prob(modify):
     data = modify.data
     probs = data["weight_load_prob"]
     for p in probs:
-        prob = list()
-        prob.append(round((1 - p) / 2, 2))
-        prob.append(round(1 - p, 2))
-        prob.append(1)
-        print("带宽分配概率： ", prob)
-        data["env_args"]["prob"] = prob
+        data["env_args"]["prob"] = get_weight_load_prob(p)
         modify.dump()
 
         my_main()
@@ -281,11 +267,16 @@ def plot_scale():
     flag = "cc_cl"
     random_mean_reward, all_local_max_expectation, all_offload_max_expectation, rl_max_expectation = get_reward_data(
         flag)
+    print(random_mean_reward)
+    print(all_local_max_expectation)
+    print(all_offload_max_expectation)
+    print(rl_max_expectation)
     x = ModifyYAML(get_ec_config_file_path()).data["cc_cl_scale"]
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, r"$C_c / C_l$", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
+         rl_max_expectation, r"$C_c / C_l$", r"normalized $\bar{\psi}$", png_file_path, eps_file_path,
+         (8, 6), 12)
 
 
 def plot_light_load():
@@ -297,7 +288,8 @@ def plot_light_load():
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, " probability of light load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
+         rl_max_expectation, " probability of light load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path,
+         (5.6, 5.6), 16)
 
 
 def plot_mid_load():
@@ -309,7 +301,8 @@ def plot_mid_load():
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, "probability of moderate load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
+         rl_max_expectation, "probability of moderate load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path,
+         (5.6, 5.6), 16)
 
 
 def plot_weight_load():
@@ -321,7 +314,8 @@ def plot_weight_load():
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.eps")
     plot(x, random_mean_reward, all_local_max_expectation, all_offload_max_expectation,
-         rl_max_expectation, "probability of heavy load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path)
+         rl_max_expectation, "probability of heavy load", r"normalized $\bar{\psi}$", png_file_path, eps_file_path,
+         (5.6, 5.6), 16)
 
 
 def plot(x, random_mean_reward,
@@ -331,12 +325,13 @@ def plot(x, random_mean_reward,
          x_label,
          y_label,
          png_file_path,
-         eps_file_path):
+         eps_file_path,
+         figsize,
+         fontsize):
     font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
     prop = font_manager.FontProperties(fname=font_path)
     plt.rcParams["font.family"] = prop.get_name()
-    # rc('text', usetex=True)
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=figsize)
     plt.plot(x, rl_max_expectation, "ro-", label="QMIX", linewidth=3,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=10)
     plt.plot(x, random_mean_reward, "cs--", label="random", linewidth=2,
@@ -345,14 +340,14 @@ def plot(x, random_mean_reward,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
     plt.plot(x, all_offload_max_expectation, "yd--", label="all offload", linewidth=2,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
-    plt.xlabel(x_label, fontsize=12)
-    plt.ylabel(y_label, fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.xticks(x, fontsize=12)
+    plt.xlabel(x_label, fontsize=fontsize)
+    plt.ylabel(y_label, fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    plt.xticks(x, fontsize=fontsize)
     plt.grid()
-    plt.legend(fontsize=12)
-    plt.savefig(png_file_path, format="png")
-    plt.savefig(eps_file_path, format="eps")
+    plt.legend(fontsize=fontsize)
+    plt.savefig(png_file_path, format="png", dpi=200, bbox_inches="tight")
+    plt.savefig(eps_file_path, format="eps", dpi=200, bbox_inches="tight")
     plt.show()
 
 
@@ -378,8 +373,8 @@ def plot_reward(reward_path):
     plt.grid()
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.eps")
-    plt.savefig(png_file_path, format="png")
-    plt.savefig(eps_file_path, format="eps")
+    plt.savefig(png_file_path, format="png", dpi=200, bbox_inches="tight")
+    plt.savefig(eps_file_path, format="eps", dpi=200, bbox_inches="tight")
     plt.show()
 
 
@@ -393,6 +388,7 @@ def get_reward_data(flag):
     all_local_max_expectation = np.loadtxt(get_data_file_path("all_local", flag))
     all_offload_max_expectation = np.loadtxt(get_data_file_path("all_offload", flag))
     rl_max_expectation = np.loadtxt(get_data_file_path("rl", flag))
+    # print(random_mean_reward)
     reward = [np.max(random_mean_reward), np.max(all_local_max_expectation),
               np.max(all_offload_max_expectation), np.max(rl_max_expectation)]
     max_reward = np.max(reward)
