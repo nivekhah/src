@@ -1,4 +1,4 @@
-from envs.ec.ec_env import ECMA
+from src.envs.ec.ec_env import ECMA
 import numpy as np
 import copy
 

@@ -38,6 +38,7 @@ class DataSaver:
     def to_file(self):
         if os.path.exists(self.file_dir):
             os.remove(self.file_dir)
+        print(self.data)
         json_data = json.dumps(self.data,indent=4)
         with open(self.file_dir,"w") as json_file:
             json_file.write(json_data)
