@@ -86,48 +86,17 @@ def process_train_state():
 
 if __name__ == '__main__':
     process_train_state()
-    # state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
-    # data = pd.read_csv(state_path)
-    # state_ = data["state"]
-    # action_ = data["action"]
-    # reward_ = data["reward"]
-    # print(reward)
-    # print(state)
+    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
+    data = pd.read_csv(state_path)
+    state_ = data["state"]
+    action_ = data["action"]
+    reward_ = data["reward"]
 
-    # ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
-    #
-    # hashcode = []
-    # state_statistic = []
-    # reward_statistic = []
-    # opt_reward_statistic = []
-    #
-    # count = 0
-    #
-    # for index, item in enumerate(state_):
-    #     s = list(map(float, state_[index].split("[")[1].split("]")[0].split(",")))
-    #     a = list(map(int, action_[index].split("[")[1].split("]")[0].split(",")))
-    #     r = float(reward_[index])
+    ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
 
-        # code = hash(str(s))
-        # if code not in hashcode:
-        #     hashcode.append(code)
-        #     state_statistic.append(str(s))
-        #     reward_statistic.append(r)
-        #     temp_reward = get_optimal(s, a, r, ec_modify.data)
-        #     opt_reward_statistic.append(temp_reward)
+    for index, item in enumerate(state_):
+        s = list(map(float, state_[index].split("[")[1].split("]")[0].split(",")))
+        a = list(map(int, action_[index].split("[")[1].split("]")[0].split(",")))
+        r = float(reward_[index])
 
-        # reward = get_optimal(s, a, r, ec_modify.data)
-        #
-        # if reward == r:
-        #     count += 1
-
-    # print(count/6000)
-    # print(len(state_statistic))
-    # x = [i for i in range(len(state_statistic))]
-    # plt.plot(x, reward_statistic, label="QMIX")
-    # plt.plot(x, opt_reward_statistic, label="Optimal")
-    # # plt.xticks(state_statistic)
-    # plt.xlabel("state")
-    # plt.ylabel("reward")
-    # plt.legend()
-    # plt.show()
+        reward = get_optimal(s, ec_modify.data)
