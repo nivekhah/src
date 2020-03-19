@@ -33,7 +33,7 @@ mid_load_checkpoint_path: [qmix__2020-03-14_14-21-20, qmix__2020-03-14_14-25-33,
 mid_load_prob: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 plot_cc_cl_scale: true
 plot_light_load: false
-plot_mid_load: false
+plot_mid_load: fasle
 plot_reward: false
 plot_weight_load: false
 reward_path: /home/csyi/pymarl/results/sacred/76/info.json

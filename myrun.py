@@ -345,6 +345,8 @@ def plot(x, random_mean_reward,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
     plt.plot(x, all_offload_max_expectation, "yd--", label="all offload", linewidth=2,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=8)
+    print(x,rl_max_expectation.tolist(),random_mean_reward.tolist(),all_local_max_expectation.tolist(),all_offload_max_expectation.tolist())
+    print(x_label,y_label)
     plt.xlabel(x_label, fontsize=12)
     plt.ylabel(y_label, fontsize=12)
     plt.yticks(fontsize=12)
