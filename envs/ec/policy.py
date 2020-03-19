@@ -1,4 +1,4 @@
-from src.envs.ec.ec_env import ECMA
+from envs.ec.ec_env import ECMA
 import numpy as np
 import copy
 
@@ -147,13 +147,18 @@ class RandomAgent:
 
 if __name__ == '__main__':
     # prob = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    prob = [0]
-    from myrun import get_mid_load_prob
+    # prob = [0]
+    # from myrun import get_mid_load_prob
+    #
+    # for item in prob:
+    #     p = get_mid_load_prob(item)
+    #     print("带宽概率为：", p)
+    #     env = ECMA(prob=p)
+    #     policy = Policy(env, "random")
+    #     policy.run(60000)
+    #     policy.cal_max_expectation()
 
-    for item in prob:
-        p = get_mid_load_prob(item)
-        print("带宽概率为：", p)
-        env = ECMA(prob=p)
-        policy = Policy(env, "random")
-        policy.run(60000)
-        policy.cal_max_expectation()
+    env = ECMA()
+    policy = Policy(env, "all_local")
+    policy.run(6000)
+    # policy.cal_max_expectation()

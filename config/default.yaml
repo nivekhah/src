@@ -4,7 +4,7 @@ batch_size_run: 1
 buffer_cpu_only: true
 buffer_size: 32
 cal_max_expectation_tasks: false
-checkpoint_path: ""
+checkpoint_path: ''
 critic_lr: 0.0005
 env: ec
 env_args: {}
@@ -27,7 +27,7 @@ rnn_hidden_dim: 64
 runner: episode
 runner_log_interval: 100
 save_model: true
-save_model_interval: 40000
+save_model_interval: 20000
 save_replay: false
 t_max: 3000
 test_greedy: true

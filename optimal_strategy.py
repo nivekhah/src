@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 from envs.ec.modify_yaml import ModifyYAML
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def do_local(task, args):
@@ -40,7 +42,7 @@ def agent_optimal(obs, args):
         return 0, time_local
 
 
-def is_optimal(state, action, reward, args):
+def get_optimal(state, args):
     actions = []
     times = []
     for i in range(int(len(state) / 2)):
@@ -48,25 +50,84 @@ def is_optimal(state, action, reward, args):
         a, t = agent_optimal(obs, args)
         actions.append(a)
         times.append(t)
+
     rewards = args["env_args"]["sum_d"] / max(times)
-    if actions != action:
-        print(state, "\t", action, "\t", actions, "\t", reward, "\t", rewards)
+    # if actions != action:
+    #     print(state, "\t", action, "\t", actions, "\t", reward, "\t", rewards)
+    return rewards
+
+
+def process_train_state():
+    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
+    reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
+    op_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "optimal_reward.txt")
+    error_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "error.txt")
+    state = np.loadtxt(state_path).tolist()
+    # np.savetxt(state_path, state, fmt="%.2f")
+    reward = np.loadtxt(reward_path).tolist()
+    ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
+    optimal_reward = []
+    error_list = []
+    for index, item in enumerate(state):
+        o_r = get_optimal(item, ec_modify.data)
+        optimal_reward.append(o_r)
+        error = (round(o_r, 5) - round(reward[index], 5)) / round(o_r, 5)
+        error_list.append(error)
+        if error < 0:
+            print(error)
+    np.savetxt(op_reward_path, optimal_reward)
+    np.savetxt(error_path, error_list)
+    print(error_list)
+    # print(optimal_reward)
+    # print(reward)
+    # res = np.subtract(optimal_reward, reward)
+    # print(res)
 
 
 if __name__ == '__main__':
-    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
-    data = pd.read_csv(state_path)
-    state = data["state"]
-    action = data["action"]
-    reward = data["reward"]
+    process_train_state()
+    # state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
+    # data = pd.read_csv(state_path)
+    # state_ = data["state"]
+    # action_ = data["action"]
+    # reward_ = data["reward"]
     # print(reward)
     # print(state)
 
-    ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
+    # ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
+    #
+    # hashcode = []
+    # state_statistic = []
+    # reward_statistic = []
+    # opt_reward_statistic = []
+    #
+    # count = 0
+    #
+    # for index, item in enumerate(state_):
+    #     s = list(map(float, state_[index].split("[")[1].split("]")[0].split(",")))
+    #     a = list(map(int, action_[index].split("[")[1].split("]")[0].split(",")))
+    #     r = float(reward_[index])
 
-    for index, item in enumerate(state):
-        s = list(map(float, state[index].split("[")[1].split("]")[0].split(",")))
-        a = list(map(int, action[index].split("[")[1].split("]")[0].split(",")))
-        r = float(reward[index])
-        # r = list(map(float, action[index].split("[")[1].split("]")[0].split(",")))
-        is_optimal(s, a, r, ec_modify.data)
+        # code = hash(str(s))
+        # if code not in hashcode:
+        #     hashcode.append(code)
+        #     state_statistic.append(str(s))
+        #     reward_statistic.append(r)
+        #     temp_reward = get_optimal(s, a, r, ec_modify.data)
+        #     opt_reward_statistic.append(temp_reward)
+
+        # reward = get_optimal(s, a, r, ec_modify.data)
+        #
+        # if reward == r:
+        #     count += 1
+
+    # print(count/6000)
+    # print(len(state_statistic))
+    # x = [i for i in range(len(state_statistic))]
+    # plt.plot(x, reward_statistic, label="QMIX")
+    # plt.plot(x, opt_reward_statistic, label="Optimal")
+    # # plt.xticks(state_statistic)
+    # plt.xlabel("state")
+    # plt.ylabel("reward")
+    # plt.legend()
+    # plt.show()

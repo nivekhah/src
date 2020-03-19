@@ -221,18 +221,24 @@ def write_train_default_config():
     :return:
     """
     default = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "default.yaml"))
+    alg_config = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "algs", "qmix.yaml"))
     default_data = default.data
     default_data["checkpoint_path"] = ""
     default_data["cal_max_expectation_tasks"] = False
+    alg_config.data["epsilon_finish"] = 0.1
     default.dump()
+    alg_config.dump()
 
 
 def write_gen_default_config(checkpoint_path):
     default = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "default.yaml"))
+    alg_config = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "algs", "qmix.yaml"))
     default_data = default.data
     default_data["checkpoint_path"] = os.path.join(os.path.dirname(__file__), "results", "models", checkpoint_path)
     default_data["cal_max_expectation_tasks"] = True
+    alg_config.data["epsilon_finish"] = 0
     default.dump()
+    alg_config.dump()
 
 
 def run_policy(env, policy_name, t_max, flag):
@@ -267,10 +273,10 @@ def plot_scale():
     flag = "cc_cl"
     random_mean_reward, all_local_max_expectation, all_offload_max_expectation, rl_max_expectation = get_reward_data(
         flag)
-    print(random_mean_reward)
-    print(all_local_max_expectation)
-    print(all_offload_max_expectation)
-    print(rl_max_expectation)
+    print(random_mean_reward.tolist())
+    print(all_local_max_expectation.tolist())
+    print(all_offload_max_expectation.tolist())
+    print(rl_max_expectation.tolist())
     x = ModifyYAML(get_ec_config_file_path()).data["cc_cl_scale"]
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "cc_cl.eps")
@@ -351,26 +357,43 @@ def plot(x, random_mean_reward,
     plt.show()
 
 
-def plot_reward(reward_path):
-    import json
+def parse_reward(period):
+    file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
+    reward = np.loadtxt(file_path)
+    reward = np.divide(reward, np.max(reward))
+    max_reward = []
+    min_reward = []
+    mean_reward = []
+    period_reward = []
+    for index, item in enumerate(reward):
+        period_reward.append(item)
+        if (index + 1) % period == 0:
+            max_reward.append(np.max(period_reward))
+            min_reward.append(np.min(period_reward))
+            mean_reward.append(np.mean(period_reward))
+            period_reward = []
+    return copy.deepcopy(max_reward), copy.deepcopy(min_reward), copy.deepcopy(mean_reward)
 
-    with open(reward_path, 'r') as f:
-        reward = np.array(list(json.load(f)["return_mean"]))
-        max_reward = np.max(reward)
-        normal_reward = np.divide(reward, max_reward)
 
+def plot_reward(period):
+    max_reward, min_reward, mean_reward = parse_reward(period)
     font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
     prop = font_manager.FontProperties(fname=font_path)
     plt.rcParams["font.family"] = prop.get_name()
-    # x = [i for i in range(len(normal_reward))]
-    plt.figure(figsize=(8, 6))
-    plt.plot(normal_reward, 'r')
-    plt.xlabel(r"time step ($10^2$)", fontsize=12)
+    x = [i for i in range(len(mean_reward))]
+    plt.figure(figsize=(4.2, 4.2))
+    # plt.plot(x, min_reward, label="min reward")
+    # plt.plot(x, max_reward, label="max reward")
+    plt.plot(x, mean_reward, label="mean reward")
+    plt.fill_between(x, mean_reward, max_reward, facecolor="gray")
+    plt.fill_between(x, mean_reward, min_reward, facecolor="gray")
+    plt.xlabel(r"time step", fontsize=12)
     plt.ylabel("normalized $r$", fontsize=12)
     plt.yticks(fontsize=12)
     # plt.xticks(x, fontsize=10)
     plt.xticks(fontsize=12)
     plt.grid()
+    plt.legend()
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "reward.eps")
     plt.savefig(png_file_path, format="png", dpi=200, bbox_inches="tight")
@@ -464,4 +487,4 @@ if __name__ == '__main__':
         plot_weight_load()
 
     if ec_modify.data["plot_reward"] is True:
-        plot_reward(ec_modify.data["reward_path"])
+        plot_reward(ec_modify.data["reward_period"])

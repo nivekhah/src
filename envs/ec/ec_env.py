@@ -9,12 +9,12 @@ class ECMA(object):
                  seed=None,
                  max_steps=20,
                  bandwidth=[2, 1, 0.1],
-                 cc=10,
+                 cc=40,
                  cl=1,
                  n_agents=4,
                  n_actions=2,
                  observation_size=2,
-                 prob=[0.2, 0.8, 1],
+                 prob=[0.8, 0.9, 1],
                  sum_d=10,
                  task_proportion=[0.25, 0.25, 0.25, 0.25]):
         self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")

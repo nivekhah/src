@@ -188,13 +188,35 @@ def run_sequential(args, logger):
     logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
 
     global_reward = []
+    global_state = []
+    test_state = []  # 用于保存测试模式下产生的 state
+    test_reward = []  # 用于保存测试模式下产生的 reward
+    file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
+    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
+    test_state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
+    test_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
 
     while runner.t_env <= args.t_max:
 
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
-
         global_reward += get_episode_reward(episode_batch.data.transition_data)  # 将每一个 step 的 reward 都记录下来
+        global_state += get_episode_state(episode_batch.data.transition_data)  # 将每个 step 的 state 都记录下来
+
+        # 此处将 test_mode 设置为 True，以使得 epsilon 为 0
+        test_batch = runner.run(test_mode=True)
+        test_state += get_episode_state(test_batch.data.transition_data)
+        test_reward += get_episode_reward(test_batch.data.transition_data)
+
+        if runner.t_env % args.test_interval == 0:  # 每隔 test_interval 向文件中写入一次保存的 state, reward 数据
+            save_state_reward(state_path, global_state)
+            global_state = []
+            save_state_reward(file_path, global_reward)
+            global_reward = []
+            save_state_reward(test_state_path, test_state)
+            test_state = []
+            save_state_reward(test_reward_path, test_reward)
+            test_reward = []
 
         buffer.insert_episode_batch(episode_batch)
 
@@ -242,8 +264,10 @@ def run_sequential(args, logger):
             last_log_T = runner.t_env
 
     runner.close_env()
-    file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
-    np.savetxt(file_path, global_reward)
+    save_state_reward(state_path, global_state)
+    save_state_reward(file_path, global_reward)
+    save_state_reward(test_state_path, test_state)
+    save_state_reward(test_reward_path, test_reward)
     logger.console_logger.info("Finished Training")
 
 
@@ -260,6 +284,11 @@ def args_sanity_check(config, _log):
         config["test_nepisode"] = (config["test_nepisode"] // config["batch_size_run"]) * config["batch_size_run"]
 
     return config
+
+
+def save_state_reward(path, data):
+    with open(path, "a") as f:
+        np.savetxt(f, data)
 
 
 def cal_max_expectation_tasks(args, mac, learner, runner):
