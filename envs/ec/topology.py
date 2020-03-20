@@ -239,11 +239,9 @@ class Topology:
         [0. 0. 1. 1. 0.],
         [0. 0. 1. 0. 1.],
         [1. 0. 1. 0. 0.]]
-        潘胜利:
         Y=RX   就是经过 algorithm 1 得到的 R 和Y。
         Y=RX  ==>   H_x = H_y^{T} R / (sum H_y) 来计算得到。H_y^{T} 是 列向量 H_y 的装置
 
-        潘胜利:
         H_y 就是 FIM 确定的 各个相关测量数据 所占的比例
 
         :return:
