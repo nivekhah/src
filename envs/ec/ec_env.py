@@ -9,12 +9,12 @@ class ECMA(object):
                  seed=None,
                  max_steps=20,
                  bandwidth=[2, 1, 0.1],
-                 cc=10,
+                 cc=40,
                  cl=1,
                  n_agents=4,
                  n_actions=2,
                  observation_size=2,
-                 prob=[0.2, 0.8, 1],
+                 prob=[0.8, 0.9, 1],
                  sum_d=10,
                  task_proportion=[0.25, 0.25, 0.25, 0.25]):
         self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
@@ -46,6 +46,7 @@ class ECMA(object):
     def step(self, actions):
         self.cnt += 1
         T = self.do_actions(actions)  # 处理完任务所花费的时间
+        # print("处理完任务所花的总时间", T)
         if self.cnt == self.MAX_STEPS:
             done = True
         else:
@@ -53,7 +54,7 @@ class ECMA(object):
         reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
-        print(reward)
+        # print(reward)
         return reward, done, {}
 
     def ready_for_next_step(self):
@@ -70,6 +71,7 @@ class ECMA(object):
         T = []
         for es in self.edge_servers:
             time = es.do_action(actions[es.id], self.tcc)
+            # print("执行动作: ", actions[es.id], "所发费的时间为", time)
             T.append(time)
         return np.max(T)
 
