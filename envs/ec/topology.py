@@ -7,9 +7,6 @@ import sys
 import os
 from matplotlib import font_manager
 from src.envs.ec.data_processor import DataSaver
-font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
-prop = font_manager.FontProperties(fname=font_path)
-plt.rcParams["font.family"] = prop.get_name()
 class Topology:
     # 定义topo
     def __init__(self,
@@ -22,7 +19,7 @@ class Topology:
                             [1, 0, 0, 0, 0, 1],
                             [0, 1, 0, 0, 1, 0],
                             [0, 1, 0, 0, 0, 1]]),
-                 monitor_vector=np.array([1, 1, 0, 0, 1, 1])
+                 monitor_vector=np.array([1, 1, 0, 0, 1, 1]),way="FIM"
                  ):
         """
         :param matrix 测量矩阵
@@ -40,13 +37,27 @@ class Topology:
         :param var_vector 链路时延方差向量
         [6, 2, 5, 2, 4]
         """
-        self.matrix = matrix
-        self.node_matrix = node_matrix
-        self.monitor_vector = monitor_vector
-        self.var_vector = var_vector
-        # self.proportion = self.get_proportion()
-        self.proportion = self.get_real_proportion()
-        self.H_x = self.get_H_x()
+        self.way = way
+        # print("测量方式：",self.way)
+        if self.way == "Direct":
+            self.var_vector = var_vector
+            self.reduced_matrix = self.measure_matrix = np.array([
+                [1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0],
+                [0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 1],
+            ])
+            self.proportion = self.get_direct_proportion()
+            self.H_x = self.get_H_x()
+        else:
+            self.matrix = matrix
+            self.node_matrix = node_matrix
+            self.monitor_vector = monitor_vector
+            self.var_vector = var_vector
+            # self.proportion = self.get_proportion()
+            self.proportion = self.get_real_proportion()
+            self.H_x = self.get_H_x()
 
     def get_extend_matrix(self):
         """
@@ -213,6 +224,13 @@ class Topology:
         proportion = self.cal_proportions(Phi, dotY)
         return proportion
 
+    def get_direct_proportion(self):
+        Y_value = list(np.dot(self.measure_matrix,self.var_vector))
+        self.Phi = self.cal_phi(Y_value,self.measure_matrix)
+        proportion = []
+        return []
+
+
     def get_H_x(self):
         """
         reduced_matrix =
@@ -221,11 +239,9 @@ class Topology:
         [0. 0. 1. 1. 0.],
         [0. 0. 1. 0. 1.],
         [1. 0. 1. 0. 0.]]
-        潘胜利:
         Y=RX   就是经过 algorithm 1 得到的 R 和Y。
         Y=RX  ==>   H_x = H_y^{T} R / (sum H_y) 来计算得到。H_y^{T} 是 列向量 H_y 的装置
 
-        潘胜利:
         H_y 就是 FIM 确定的 各个相关测量数据 所占的比例
 
         :return:
@@ -247,13 +263,14 @@ class Topology:
 def region_error():
     """
    画出均匀分布区间和估计误差
+
    Fig 1.a 所有的链路的时延方差 服从均匀分布（区间长度从 0 开始；0 区间长度表示所有链路具有相同的时延方差），x-axis：区间的长度，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
 
     :return:
     """
     #参数设置
     parameter = {
-        "regions":list(range(0,20+2,2)),
+        "regions":list(range(0,8+2,2)),
         "start_point":5,
         "exp_times": 100,  # 测量的重复次数
         "n": 100,  # 生成方差的次数
@@ -306,12 +323,12 @@ def region_error():
 
     plt.figure()
     plt.plot(regions, y1_axis, label="Fim", marker=".", color="black")
-    plt.plot(regions, y2_axis, label="Uniform", marker="o", color="red")
-    plt.xlabel(r"scale of $\theta$")
-    plt.ylabel("mean MSE")
+    plt.plot(regions, y2_axis, label="Average", marker="o", color="red")
+    plt.xlabel("scale")
+    plt.ylabel("mse")
     # plt.ylim([0,1])
     plt.legend()
-    # plt.title("the variation of scale vs MSE")
+    plt.title("the variation of scale vs MSE")
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
     if not os.path.exists(dir):
@@ -323,7 +340,7 @@ def region_error():
 
 
 
-def average_optimal():
+def uniform_fim():
     """
     按照 Fig 1.a 选定合适的 链路时延方差
     Fig 1.b x-axis: k 步逼近，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
@@ -336,15 +353,16 @@ def average_optimal():
         "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
         "k_step":10,
         "sum_data":10000,
-        "exp_times":100
+        "exp_times":500
     }
     #保存参数
     func_name = sys._getframe().f_code.co_name
+    print(func_name, "is running at ", time.strftime("%Y-%m-%d_%H-%M-%S"))
     data_saver = DataSaver(func_name)
     data_saver.add_item("parameter", parameter)
     #计算最优比例
     var_vector = parameter["var_vector"]
-    topo = Topology(var_vector)
+    topo = Topology(var_vector=var_vector)
     optimal_proportion = topo.Phi
     data_saver.add_item("FIM_proportion",optimal_proportion)
     #平均比列
@@ -354,35 +372,38 @@ def average_optimal():
     all_proportion = []
     for i in range(k_step):
         proportion = np.array(average_proportion) + (np.array(optimal_proportion) - np.array(average_proportion)) / k_step * i
-        all_proportion.append(proportion)
+        all_proportion.append(proportion.tolist())
     all_proportion.append(optimal_proportion)
     #这里各个链路占的比例应该也从平均比例变化到H_x
     H_x_proportions = []
     for i in range(k_step):
-        H_x_proportions.append(np.array(average_proportion)+(np.array(topo.H_x)-np.array(average_proportion))/k_step*i)
-    H_x_proportions.append(topo.H_x)
-    data_saver.add_item("data_proportion",all_proportion)
-    data_saver.add_item("H_x_proportions",H_x_proportions)
+        proportion = np.array(average_proportion)+(np.array(topo.H_x)-np.array(average_proportion))/k_step * i
+        H_x_proportions.append(proportion.tolist())
+    H_x_proportions.append(topo.H_x.tolist())
+    data_saver.add_item("data_proportion", all_proportion)
+    data_saver.add_item("H_x_proportions", H_x_proportions)
     y_axis = []
     #数据总量
     sum_data = parameter["sum_data"]
     exp_times = parameter["exp_times"] #实验重复次数
     for index,proportion in enumerate(all_proportion):
+        print(index, time.strftime("%Y-%m-%d_%H-%M-%S"))
         mse = 0
         for _ in range(exp_times):
             cov = topo.gen_delay(topo.reduced_matrix, proportion, sum_data)
             measured_X = topo.cal_measured_link_parameter(cov)
-            # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
             mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,H_x_proportions[index]) / exp_times
         y_axis.append(mse)
 
     #画图
+    print("x_axis:", x_axis)
+    print("y_axis:", y_axis)
     plt.figure()
     plt.plot(x_axis,y_axis,marker="o",color="blue")
-    plt.xlabel("steps")
-    plt.ylabel("mean MSE")
+    plt.xlabel("step")
+    plt.ylabel("MSE")
     plt.legend()
-    # plt.title("average proportion to FIM proportion")
+    plt.title("average proportion to FIM proportion")
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
     if not os.path.exists(dir):
@@ -395,13 +416,12 @@ def average_optimal():
     data_saver.to_file()
 
 
-
 def sum_data_influence():
     parameter = {
         "region":8,
         "start_point":5,
         "n":100,#生成方差的次数
-        "sum_data_range":list(range(1000,2000,21000)),
+        "sum_data_range":[500,2000,5000,10000,50000],
         "exp_times":100,#测量的重复次数
     }
     #保存参数
@@ -437,9 +457,9 @@ def sum_data_influence():
     # 画图
     plt.figure()
     plt.plot(x_axis, y_axis, marker="o", color="blue")
-    plt.xlabel("#probe")
-    plt.ylabel("mean MSE")
-    # plt.title("the influence of #probe")
+    plt.xlabel("#data")
+    plt.ylabel("MSE")
+    plt.title("the influence of #data")
     plt.legend()
     dir = os.path.join(os.getcwd(), "data", func_name)
     fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
@@ -452,6 +472,7 @@ def sum_data_influence():
     data_saver.add_item("y_axis", y_axis)
     data_saver.to_file()
 
+
 def cdf_mse():
     """
     选出Fig 1 中 区间长度为0，中间，最大共3个值：
@@ -459,7 +480,8 @@ def cdf_mse():
     :return:
     """
     parameter = {
-        "regions": [0,10,20],
+        # "regions": [0,10,20],
+        "regions":[15],
         "start_point": 5,
         "n": 2000,  # 生成方差的次数
         "sum_data": 10000,
@@ -479,6 +501,7 @@ def cdf_mse():
     #产生的总数据量
     sum_data = parameter["sum_data"]
     for region in regions:
+        print(region)
         MSE = np.empty(shape=[0,5])
         for i in range(n):
             var_vector = np.random.randint(start_point, start_point+region+1, 5)
@@ -497,7 +520,8 @@ def cdf_mse():
         plt.figure()
         plt.hist(MSE_data,cumulative=True,normed=True)
         plt.xlabel("MSE")
-        plt.title("the cdf ("+str(region)+")")
+        plt.ylabel("CDF")
+        # plt.title("the cdf ("+str(region)+")")
         plt.legend()
         dir = os.path.join(os.getcwd(),"data", func_name)
         fig_name = dir + "/" + func_name +"_"+ str(region)+"_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
@@ -512,22 +536,361 @@ def cdf_mse():
 
 
 
+def plot_result():
+    x = [0,1,2,3,4,5,6,7,8,9,10]
+    y = [0.04315833534141526, 0.0435988569870744,0.043925725970413665,0.04300237543732725,0.04314024095026359,0.04347379847806098,
+        0.042743479500658065,0.04233640474616092,0.04202061611765972,0.042920396591611606,0.042868753494841705]
+    font_path = "/usr/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    prop = font_manager.FontProperties(fname=font_path)
+    plt.rcParams["font.family"] = prop.get_name()
+    plt.plot(x, y, label="random", marker="*")
+    # plt.plot(x, all_local_max_expectation, label="all_local", marker=">")
+    # plt.plot(x, all_offload_max_expectation, label="all_offload", marker="o")
+    # plt.plot(x, rl_max_expectation, label="rl", marker="P")
+    plt.title("avarage proportion to FIM proportion", fontsize=10)
+    plt.xlabel("steps", fontsize=10)
+    plt.ylabel("mean MSE", fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.xticks(x, fontsize=10)
+    plt.grid()
+    plt.legend(fontsize=10)
+    plt.show()
+
+
+def sum_data_influence():
+    parameter = {
+        "region":8,
+        "start_point":5,
+        "n":100,#生成方差的次数
+        "sum_data_range":[50000],
+        "exp_times":100,#测量的重复次数
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #均匀分布的参数
+    region = parameter["region"]
+    start_point = parameter["start_point"]
+    #确定数据量变化的范围
+    x_axis = sum_data_range = parameter["sum_data_range"]
+    #确定产生方差的次数
+    n = parameter["n"]
+    #确定测量重复的次数
+    exp_times = parameter["exp_times"]
+    y_axis = []
+    for sum_data in sum_data_range:
+        MSE = 0
+        for i in range(n):
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
+            #计算最优比例
+            topo = Topology(var_vector)
+            optimal_proportion = topo.Phi
+            #测量
+            mse = 0
+            for j in range(exp_times):
+                cov = topo.gen_delay(topo.reduced_matrix, optimal_proportion, sum_data)
+                measured_X = topo.cal_measured_link_parameter(cov)
+                mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,topo.H_x) / exp_times
+                # mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
+            MSE += mse/n
+        y_axis.append(MSE)
+    # 画图
+    print("x_axis:", x_axis)
+    print("y_axis:", y_axis)
+    plt.figure()
+    plt.plot(x_axis, y_axis, marker="o", color="blue")
+    plt.xlabel("#data")
+    plt.ylabel("MSE")
+    plt.title("the influence of #data")
+    plt.legend()
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis",x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+def sum_data_influence_uniform():
+    parameter = {
+        "region":8,
+        "start_point":5,
+        "n":100,#生成方差的次数
+        "sum_data_range":[50000],
+        "exp_times":100,#测量的重复次数
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #均匀分布的参数
+    region = parameter["region"]
+    start_point = parameter["start_point"]
+    #确定数据量变化的范围
+    x_axis = sum_data_range = parameter["sum_data_range"]
+    #确定产生方差的次数
+    n = parameter["n"]
+    #确定测量重复的次数
+    exp_times = parameter["exp_times"]
+    y_axis = []
+    for sum_data in sum_data_range:
+        MSE = 0
+        for i in range(n):
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
+            #计算最优比例
+            topo = Topology(var_vector)
+            uniform_proportion = [0.2,0.2,0.2,0.2,0.2]
+            #测量
+            mse = 0
+            for j in range(exp_times):
+                cov = topo.gen_delay(topo.reduced_matrix, uniform_proportion, sum_data)
+                measured_X = topo.cal_measured_link_parameter(cov)
+                mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,np.array(uniform_proportion)) / exp_times
+                # mse += np.mean((np.array(measured_X) - np.array(var_vector)) ** 2) / exp_times
+            MSE += mse/n
+        y_axis.append(MSE)
+    # 画图
+    plt.figure()
+    plt.plot(x_axis, y_axis, marker="o", color="blue")
+    print("x_axis:", x_axis)
+    print("y_axis:", y_axis)
+    plt.xlabel("#probe")
+    plt.ylabel("mean MSE")
+    # plt.title("the influence of #probe")
+    plt.legend()
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis",x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+
+'''
+直接测量
+'''
+def region_error_direct():
+    """
+   画出均匀分布区间和估计误差
+
+   Fig 1.a 所有的链路的时延方差 服从均匀分布（区间长度从 0 开始；0 区间长度表示所有链路具有相同的时延方差），x-axis：区间的长度，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
+
+    :return:
+    """
+    #参数设置
+    parameter = {
+        "regions":list(range(0,20+2,2)),
+        "start_point":5,
+        "exp_times": 100,  # 测量的重复次数
+        "n": 100,  # 生成方差的次数
+        "sum_data": 10000,
+    }
+    # 保存参数
+    func_name = sys._getframe().f_code.co_name
+    print(func_name," is running at ",time.strftime("%Y-%m-%d_%H-%M-%S"))
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    x_axis = regions = parameter["regions"]  # 设定均匀分布的区间长度值
+    start_point = parameter["start_point"]  # 设置均匀分布的中间值
+    exp_times = parameter["exp_times"]
+    n = parameter["n"]
+    # 数据总量
+    sum_data = parameter["sum_data"]
+    y_axis = []
+    for region in regions:
+        print(region,time.strftime("%Y-%m-%d_%H-%M-%S"))
+        Direct_mse = 0
+        for i in range(n):
+            # 1.均匀分布生成方差
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
+            # 2.构建topo
+            topo = Topology(var_vector=var_vector,way="Direct")
+
+            direct_mse = 0
+            for j in range(exp_times):
+                # 3.生成数据，并且推断
+                # FIM值
+                direct_cov = topo.gen_delay(topo.reduced_matrix, topo.Phi, sum_data)
+                direct_measured_X = topo.cal_measured_link_parameter(direct_cov)
+
+                #计算mse
+                direct_mse += np.dot((np.array(direct_measured_X) -var_vector) ** 2,topo.H_x) / exp_times
+
+            Direct_mse += direct_mse/n
+        y_axis.append(Direct_mse)
+    data_saver.add_item("Direct_mse",y_axis)
+
+    plt.figure()
+    plt.plot(regions, y_axis, label="Direct", marker=".", color="black")
+    plt.xlabel("scale")
+    plt.ylabel("MSE")
+    # plt.ylim([0,1])
+    plt.legend()
+    # plt.title("the variation of scale vs MSE")
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.to_file()
+
+def sum_data_influence_direct():
+    parameter = {
+        "region":8,
+        "start_point":5,
+        "n":100,#生成方差的次数
+        "sum_data_range":list(range(1000,23000,2000)),
+        "exp_times":100,#测量的重复次数
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    print(func_name, " is running at ", time.strftime("%Y-%m-%d_%H-%M-%S"))
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #均匀分布的参数
+    region = parameter["region"]
+    start_point = parameter["start_point"]
+    #确定数据量变化的范围
+    x_axis = sum_data_range = parameter["sum_data_range"]
+    #确定产生方差的次数
+    n = parameter["n"]
+    #确定测量重复的次数
+    exp_times = parameter["exp_times"]
+    y_axis = []
+    for sum_data in sum_data_range:
+        print(sum_data,time.strftime("%Y-%m-%d_%H-%M-%S"))
+        MSE = 0
+        for i in range(n):
+            var_vector = np.random.randint(start_point, start_point+region+1, 5)
+            #计算最优比例
+            topo = Topology(var_vector=var_vector,way="Direct")
+            #测量
+            mse = 0
+            for j in range(exp_times):
+                cov = topo.gen_delay(topo.reduced_matrix, topo.Phi, sum_data)
+                measured_X = topo.cal_measured_link_parameter(cov)
+                mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2, topo.H_x) / exp_times
+            MSE += mse/n
+        y_axis.append(MSE)
+    # 画图
+    print("x_axis:", x_axis)
+    print("y_axis:", y_axis)
+    plt.figure()
+    plt.plot(x_axis, y_axis, marker="o", color="blue",label="Direct")
+    plt.xlabel("#probe")
+    plt.ylabel("MSE")
+    # plt.title("the influence of #probe")
+    plt.legend()
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis", x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+def uniform_direct():
+    """
+    按照 Fig 1.a 选定合适的 链路时延方差
+    Fig 1.b x-axis: k 步逼近，y-axis： NT的估计误差 （所有 链路的 平均估计误差）；重复实验k次
+
+    最直接的一个方案：分成 k 步来逼近，每步按照  (最优比例-均匀比例)/k  来修正上一步的比例
+    是的哈，按照上面的式子，你肯定最终 是收敛到最优方案的
+    """
+    parameter = {
+        "var_vector": [5,8,16,12,10], #由图1 a中
+        "average_proportion": [0.2, 0.2, 0.2, 0.2, 0.2],
+        "k_step":10,
+        "sum_data":10000,
+        "exp_times":500
+    }
+    #保存参数
+    func_name = sys._getframe().f_code.co_name
+    print(func_name, "is running at ", time.strftime("%Y-%m-%d_%H-%M-%S"))
+    data_saver = DataSaver(func_name)
+    data_saver.add_item("parameter", parameter)
+    #计算最优比例,直接测量
+    var_vector = parameter["var_vector"]
+    direct_topo = Topology(var_vector=var_vector,way="Direct")
+    direct_proportion = direct_topo.Phi
+    data_saver.add_item("direct_proportion",direct_proportion)
+    #平均比列
+    average_proportion = parameter["average_proportion"]
+    k_step = parameter["k_step"] #分多少次接近最优比列
+    x_axis = list(range(k_step+1))
+    all_proportion = []
+    for i in range(k_step):
+        proportion = np.array(average_proportion) + (np.array(direct_proportion) - np.array(average_proportion)) / k_step * i
+        all_proportion.append(proportion.tolist())
+    all_proportion.append(direct_proportion)
+    #这里各个链路占的比例应该也从平均比例变化到H_x
+    H_x_proportions = []
+    for i in range(k_step):
+        proportion = np.array(average_proportion)+(np.array(direct_topo.H_x)-np.array(average_proportion))/k_step*i
+        H_x_proportions.append(proportion.tolist())
+    H_x_proportions.append(direct_topo.H_x.tolist())
+    data_saver.add_item("data_proportion", all_proportion)
+    data_saver.add_item("H_x_proportions", H_x_proportions)
+    y_axis = []
+    #数据总量
+    sum_data = parameter["sum_data"]
+    exp_times = parameter["exp_times"] #实验重复次数
+    for index,proportion in enumerate(all_proportion):
+        print(index,time.strftime("%Y-%m-%d_%H-%M-%S"))
+        mse = 0
+        for _ in range(exp_times):
+            cov = direct_topo.gen_delay(direct_topo.reduced_matrix, proportion, sum_data)
+            measured_X = direct_topo.cal_measured_link_parameter(cov)
+            # mse += np.mean((np.array(measured_X) - np.array(var_vector))**2)/exp_times
+            mse += np.dot((np.array(measured_X) - np.array(var_vector)) ** 2,H_x_proportions[index]) / exp_times
+        y_axis.append(mse)
+    print("x_axis:", x_axis)
+    print("y_axis:", y_axis)
+    #画图
+    plt.figure()
+    plt.plot(x_axis,y_axis,marker="o",color="blue")
+    plt.xlabel("step")
+    plt.ylabel("MSE")
+    plt.legend()
+    plt.title("average proportion to FIM proportion")
+    dir = os.path.join(os.getcwd(), "data", func_name)
+    fig_name = dir + "/" + func_name + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(fig_name)
+    plt.show()
+    plt.close()
+    data_saver.add_item("x_axis", x_axis)
+    data_saver.add_item("y_axis", y_axis)
+    data_saver.to_file()
+
+
 
 if __name__ == "__main__":
-    # measure_matrix = np.array([[1,0,1,1,0],
-    #     [1,0,1,0,1],
-    #     [0,1,1,1,0],
-    #     [0,1,1,0,1]])
-    # node_matrix = np.array([[1,0,0,0,1,0],
-    #     [1,0,0,0,0,1],
-    #     [0,1,0,0,1,0],
-    #     [0,1,0,0,0,1]])
-    # monitor_vector = np.array([1,1,0,0,1,1])
-
-    # var_vector = [6, 2, 5, 2, 4]
-    # topo = Topology(var_vector)
     # region_error()
-    cdf_mse()
-
+    # cdf_mse()
     # sum_data_influence()
-    # average_optimal()
+    # sum_data_influence_uniform()
+    # uniform_fim()
+    # topo = Topology(var_vector=[4,5,6,1,2],way="Direct")
+    # region_error_direct()
+    # sum_data_influence_direct()
+    # uniform_direct()
+    # topo = Topology(var_vector=[5,6,15,20,10])
+    # print(topo.reduced_matrix)
+    # print(topo.Phi)
+    # print(topo.proportion)
+    pass
