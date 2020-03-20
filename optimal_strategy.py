@@ -58,33 +58,33 @@ def get_optimal(state, args):
 
 
 def process_train_state():
-    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
-    reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
+    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
+    # reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
     op_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "optimal_reward.txt")
-    error_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "error.txt")
+    # error_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "error.txt")
     state = np.loadtxt(state_path).tolist()
     # np.savetxt(state_path, state, fmt="%.2f")
-    reward = np.loadtxt(reward_path).tolist()
+    # reward = np.loadtxt(reward_path).tolist()
     ec_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
     optimal_reward = []
-    error_list = []
+    # error_list = []
     for index, item in enumerate(state):
-        o_r = get_optimal(item, ec_modify.data)
+        o_r = get_optimal(item, ec_modify.data)  # 获得最优策略对应的 reward
         optimal_reward.append(o_r)
-        error = (round(o_r, 5) - round(reward[index], 5)) / round(o_r, 5)
-        error_list.append(error)
-        if error < 0:
-            print(error)
+        # error = (round(o_r, 5) - round(reward[index], 5)) / round(o_r, 5)  # 计算相对误差
+        # error_list.append(error)
+        # if error < 0:
+            # print(error)
     np.savetxt(op_reward_path, optimal_reward)
-    np.savetxt(error_path, error_list)
-    print(error_list)
+    # np.savetxt(error_path, error_list)
+    # print(error_list)
     # print(optimal_reward)
     # print(reward)
     # res = np.subtract(optimal_reward, reward)
     # print(res)
 
 
-if __name__ == '__main__':
+def main():
     process_train_state()
     state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
     data = pd.read_csv(state_path)
@@ -100,3 +100,7 @@ if __name__ == '__main__':
         r = float(reward_[index])
 
         reward = get_optimal(s, ec_modify.data)
+
+
+if __name__ == '__main__':
+    pass

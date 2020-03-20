@@ -56,16 +56,16 @@ class Policy:
         for key in temp_dict.keys():
             probability = temp_dict[key] / t_max
             expectation += float(key)*probability
-        print(temp_dict, "期望值：", expectation)
+        # print(temp_dict, "期望值：", expectation)
 
     def cal_max_expectation(self):
         measure_state, measure_reward = self.__get_measure_state_reward()
 
-        # if self.__policy is "all_offload":
-        #     for index, item in enumerate(measure_state):
-        #         print("state: ", item)
-        #         print("reward: ", measure_reward[index])
-        #     print("measure state length: ", len(measure_state))
+        if self.__policy is "all_offload":
+            for index, item in enumerate(measure_state):
+                print(item.tolist())
+                # print("reward: ", measure_reward[index])
+            np.savetxt("test.txt", measure_state)
 
         statistic = self.__statistic_global_state()
         length = len(self.__state_list)
@@ -159,6 +159,6 @@ if __name__ == '__main__':
     #     policy.cal_max_expectation()
 
     env = ECMA()
-    policy = Policy(env, "all_local")
+    policy = Policy(env, "all_offload")
     policy.run(6000)
-    # policy.cal_max_expectation()
+    policy.cal_max_expectation()

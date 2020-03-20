@@ -189,37 +189,27 @@ def run_sequential(args, logger):
 
     global_reward = []
     global_state = []
-    # test_state = []  # 用于保存测试模式下产生的 state
-    # test_reward = []  # 用于保存测试模式下产生的 reward
     file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
     state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
-    # test_state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
-    # test_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
 
-    while runner.t_env <= args.t_max:
+    test_state = []
+    test_reward = []
+    test_state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
+    test_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
+
+    while runner.t_env <= args.t_max:  # t_env ?
 
         # Run for a whole episode at a time
-        episode_batch = runner.run(test_mode=False)
+        episode_batch = runner.run(test_mode=False)  # runner.run() 返回的是一个回合的数据。
         global_reward += get_episode_reward(episode_batch.data.transition_data)  # 将每一个 step 的 reward 都记录下来
         global_state += get_episode_state(episode_batch.data.transition_data)  # 将每个 step 的 state 都记录下来
 
-        # 此处将 test_mode 设置为 True，以使得 epsilon 为 0
-        # if args.test_mode:
-        #     test_batch = runner.run(test_mode=True)
-        #     test_state += get_episode_state(test_batch.data.transition_data)
-        #     test_reward += get_episode_reward(test_batch.data.transition_data)
-
-        if runner.t_env % args.test_interval == 0:  # 每隔 test_interval 向文件中写入一次保存的 state, reward 数据
-            save_state_reward(state_path, global_state)
-            global_state = []
-            save_state_reward(file_path, global_reward)
-            global_reward = []
-
-        # if args.test_mode and runner.t_env % args.test_interval == 0:
-        #     save_state_reward(test_state_path, test_state)
-        #     test_state = []
-        #     save_state_reward(test_reward_path, test_reward)
-        #     test_reward = []
+        # 保存测试模式下的 state, reward 数据。 隔 args.reward_period 进行测试，测试的 state 数量为 args.reward_period。
+        if runner.t_env % args.reward_period == 0:
+            for i in range(int(args.reward_period / 20)):
+                episode_data = runner.run(test_mode=True)
+                test_state += get_episode_state(episode_data.data.transition_data)
+                test_reward += get_episode_reward(episode_data.data.transition_data)
 
         buffer.insert_episode_batch(episode_batch)
 
@@ -269,9 +259,8 @@ def run_sequential(args, logger):
     runner.close_env()
     save_state_reward(state_path, global_state)
     save_state_reward(file_path, global_reward)
-    # if args.test_mode:
-    #     save_state_reward(test_state_path, test_state)
-    #     save_state_reward(test_reward_path, test_reward)
+    save_state_reward(test_state_path, test_state)
+    save_state_reward(test_reward_path, test_reward)
     logger.console_logger.info("Finished Training")
 
 
