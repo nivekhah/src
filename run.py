@@ -189,12 +189,12 @@ def run_sequential(args, logger):
 
     global_reward = []
     global_state = []
-    test_state = []  # 用于保存测试模式下产生的 state
-    test_reward = []  # 用于保存测试模式下产生的 reward
+    # test_state = []  # 用于保存测试模式下产生的 state
+    # test_reward = []  # 用于保存测试模式下产生的 reward
     file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_reward.txt")
     state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
-    test_state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
-    test_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
+    # test_state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_state.txt")
+    # test_reward_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "test_reward.txt")
 
     while runner.t_env <= args.t_max:
 
@@ -204,19 +204,22 @@ def run_sequential(args, logger):
         global_state += get_episode_state(episode_batch.data.transition_data)  # 将每个 step 的 state 都记录下来
 
         # 此处将 test_mode 设置为 True，以使得 epsilon 为 0
-        test_batch = runner.run(test_mode=True)
-        test_state += get_episode_state(test_batch.data.transition_data)
-        test_reward += get_episode_reward(test_batch.data.transition_data)
+        # if args.test_mode:
+        #     test_batch = runner.run(test_mode=True)
+        #     test_state += get_episode_state(test_batch.data.transition_data)
+        #     test_reward += get_episode_reward(test_batch.data.transition_data)
 
         if runner.t_env % args.test_interval == 0:  # 每隔 test_interval 向文件中写入一次保存的 state, reward 数据
             save_state_reward(state_path, global_state)
             global_state = []
             save_state_reward(file_path, global_reward)
             global_reward = []
-            save_state_reward(test_state_path, test_state)
-            test_state = []
-            save_state_reward(test_reward_path, test_reward)
-            test_reward = []
+
+        # if args.test_mode and runner.t_env % args.test_interval == 0:
+        #     save_state_reward(test_state_path, test_state)
+        #     test_state = []
+        #     save_state_reward(test_reward_path, test_reward)
+        #     test_reward = []
 
         buffer.insert_episode_batch(episode_batch)
 
@@ -266,8 +269,9 @@ def run_sequential(args, logger):
     runner.close_env()
     save_state_reward(state_path, global_state)
     save_state_reward(file_path, global_reward)
-    save_state_reward(test_state_path, test_state)
-    save_state_reward(test_reward_path, test_reward)
+    # if args.test_mode:
+    #     save_state_reward(test_state_path, test_state)
+    #     save_state_reward(test_reward_path, test_reward)
     logger.console_logger.info("Finished Training")
 
 
@@ -300,6 +304,9 @@ def cal_max_expectation_tasks(args, mac, learner, runner):
     :return:
     """
     print("starting to calculate max expectation value of tasks ......")
+    algs_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "algs", "qmix.yaml"))
+    algs_modify.data["epsilon_finish"] = 0
+    algs_modify.dump()
     modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
     global_state = []
     global_action = []
@@ -350,6 +357,8 @@ def get_label(modify):
         return "mid_load"
     elif modify.data["gen_data_weight_load"] is True:
         return "weight_load"
+    else:
+        return "policy_reward"
 
 
 def get_episode_state(episode_data):

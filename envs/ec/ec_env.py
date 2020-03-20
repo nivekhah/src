@@ -1,7 +1,9 @@
-from src.envs.ec.component import EdgeServer, TCC
+from envs.ec.component import EdgeServer, TCC
 from envs.ec.modify_yaml import ModifyYAML
 
 import numpy as np
+import os
+import copy
 
 
 class ECMA(object):
@@ -16,7 +18,10 @@ class ECMA(object):
                  observation_size=2,
                  prob=[0.8, 0.9, 1],
                  sum_d=10,
-                 task_proportion=[0.25, 0.25, 0.25, 0.25]):
+                 task_proportion=[0.25, 0.25, 0.25, 0.25],
+                 test_mode=False,
+                 model_step=0,
+                 state_file=""):
         self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
         self.n_agents = n_agents
         self.bandwidth = bandwidth
@@ -32,6 +37,13 @@ class ECMA(object):
         self.gen_components()
         self.episode_limit = self.MAX_STEPS
         self.cnt = 0
+
+        self.test_mode = test_mode
+        if self.test_mode:
+            # file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
+            self.total_state = np.loadtxt(state_file).tolist()[:model_step]
+            self.obs_num = 0
+            self.state_num = 0
 
     def gen_components(self):
         """
@@ -76,7 +88,16 @@ class ECMA(object):
         return np.max(T)
 
     def get_obs(self):
-        agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
+        if self.test_mode:
+            # 将 state 拆分成 self.n_agents 个 observation
+            agents_obs = []
+            s = self.total_state[self.obs_num]
+            for i in range(self.n_agents):
+                temp_obs = np.array([s[i * 2 + 1], s[i * 2]])
+                agents_obs.append(temp_obs)
+            self.obs_num += 1
+        else:
+            agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
         return agents_obs
 
     def get_obs_agent(self, agent_id):
@@ -91,10 +112,14 @@ class ECMA(object):
         获取环境的全局状态，即将每一个 edge server 的 observation 拼凑起来。
         :return: 全局状态
         """
-        state = []
-        for es in self.edge_servers:
-            state.append(es.b)
-            state.append(es.d)
+        if self.test_mode:
+            state = self.total_state[self.state_num]
+            self.state_num += 1
+        else:
+            state = []
+            for es in self.edge_servers:
+                state.append(es.b)
+                state.append(es.d)
         return np.array(state)
 
     def get_state_size(self):
@@ -150,3 +175,26 @@ class ECMA(object):
                     "n_agents": self.n_agents,
                     "episode_limit": self.episode_limit}
         return env_info
+
+
+if __name__ == '__main__':
+    file_path = os.path.join(os.path.dirname(__file__), "output", "train_state.txt")
+    env = ECMA(seed=None,
+               max_steps=20,
+               bandwidth=[2, 1, 0.1],
+               cc=40,
+               cl=1,
+               n_agents=4,
+               n_actions=2,
+               observation_size=2,
+               prob=[0.8, 0.9, 1],
+               sum_d=10,
+               task_proportion=[0.25, 0.25, 0.25, 0.25],
+               test_mode=True,
+               model_step=10,
+               state_file=file_path)
+    env.reset()
+    for i in range(10):
+        print("##############", i, "################")
+        print(env.get_obs())
+        print(env.get_state())
