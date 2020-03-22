@@ -1,3 +1,7 @@
+"""
+ModifyYAML 类主要用于读写 yaml 配置文件
+"""
+
 import yaml
 
 
