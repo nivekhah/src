@@ -1,6 +1,7 @@
 from envs.ec.modify_yaml import ModifyYAML
 from envs.ec.policy import Policy
 from envs.ec.ec_env import ECMA
+from envs.ec.expected_reward import ExpectedReward
 
 import os
 import numpy as np
@@ -16,12 +17,13 @@ def cc_cl_scale(modify):
     :param modify:
     :return:
     """
-    write_train_default_config()
+    write_train_default_config()  # 修改 default.yaml 中的配置，将 checkpoint_path 设置为空
 
     data = modify.data
     cl_cl = data["cc_cl_scale"]
+    cl = data["env_args"]["cl"]
     for scale in cl_cl:
-        data["env_args"]["cc"] = scale
+        data["env_args"]["cc"] = scale * cl
         modify.dump()
 
         my_main()
@@ -87,18 +89,21 @@ def gen_data_cc_cl(modify):
     """
     data = modify.data
     checkpoint_path = data["cc_cl_checkpoint_path"]
-    cc_cl = data["cc_cl_scale"]  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    cc_cl = data["cc_cl_scale"]  # 获取配置文件中的 cc/cl 的比例
+    cl = data["env_args"]["cl"]
     for index, scale in enumerate(cc_cl):
-        data["env_args"]["cc"] = scale
+        data["env_args"]["cc"] = scale * cl  # 依次将 cc 的设置为
         modify.dump()
-
-        write_gen_default_config(checkpoint_path[index])
 
         env = gen_env(data["env_args"])
 
-        my_main()
-
         gen_t_max = data["gen_t_max"]
+
+        if data["use_rl"]:
+            write_gen_default_config(checkpoint_path[index])
+            my_main()
+
+        run_policy(env, "optimal", gen_t_max, "cc_cl")
         run_policy(env, "random", gen_t_max, "cc_cl")
         run_policy(env, "all_local", gen_t_max, "cc_cl")
         run_policy(env, "all_offload", gen_t_max, "cc_cl")
@@ -119,13 +124,15 @@ def gen_data_light_load(modify):
         data["env_args"]["prob"] = get_light_load_prob(p)
         modify.dump()
 
-        write_gen_default_config(checkpoint_path[index])
-
         env = gen_env(data["env_args"])
 
-        my_main()
-
         gen_t_max = data["gen_t_max"]
+
+        if data["use_rl"]:
+            write_gen_default_config(checkpoint_path[index])
+            my_main()
+
+        run_policy(env, "optimal", gen_t_max, "light_load")
         run_policy(env, "random", gen_t_max, "light_load")
         run_policy(env, "all_local", gen_t_max, "light_load")
         run_policy(env, "all_offload", gen_t_max, "light_load")
@@ -147,19 +154,20 @@ def gen_data_mid_load(modify):
     checkpoint_path = data["mid_load_checkpoint_path"]
     for index, p in enumerate(prob):
         data["env_args"]["prob"] = get_mid_load_prob(p)
-        print("带宽概率： ", data["env_args"]["prob"])
         modify.dump()
-
-        write_gen_default_config(checkpoint_path[index])
 
         env = gen_env(data["env_args"])
 
-        my_main()
-
         gen_t_max = data["gen_t_max"]
-        run_policy(env, "random", gen_t_max, "mid_load")
-        run_policy(env, "all_local", gen_t_max, "mid_load")
-        run_policy(env, "all_offload", gen_t_max, "mid_load")
+
+        if data["use_rl"]:
+            write_gen_default_config(checkpoint_path[index])
+            my_main()
+
+        run_policy(env, "optimal", gen_t_max, "moderate_load")
+        run_policy(env, "random", gen_t_max, "moderate_load")
+        run_policy(env, "all_local", gen_t_max, "moderate_load")
+        run_policy(env, "all_offload", gen_t_max, "moderate_load")
 
 
 def get_mid_load_prob(prob):
@@ -171,25 +179,32 @@ def get_mid_load_prob(prob):
 
 
 def gen_data_weight_load(modify):
+    """
+    当重载的概率不同，而中载和轻载一致（轻载，中载，重载三者概率和为 1）
+    :param modify:
+    :return:
+    """
     # 加载 ec.yaml 的配置项
     data = modify.data
 
-    prob = data["weight_load_prob"]  # 为中载设置的所有可能的概率[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    prob = data["weight_load_prob"]
     checkpoint_path = data["weight_load_checkpoint_path"]
     for index, p in enumerate(prob):
         data["env_args"]["prob"] = get_weight_load_prob(p)
         modify.dump()
 
-        write_gen_default_config(checkpoint_path[index])
-
         env = gen_env(data["env_args"])
 
-        my_main()
-
         gen_t_max = data["gen_t_max"]
-        run_policy(env, "random", gen_t_max, "weight_load")
-        run_policy(env, "all_local", gen_t_max, "weight_load")
-        run_policy(env, "all_offload", gen_t_max, "weight_load")
+
+        if data["use_rl"]:
+            write_gen_default_config(checkpoint_path[index])
+            my_main()
+
+        run_policy(env, "optimal", gen_t_max, "heavy_load")
+        run_policy(env, "random", gen_t_max, "heavy_load")
+        run_policy(env, "all_local", gen_t_max, "heavy_load")
+        run_policy(env, "all_offload", gen_t_max, "heavy_load")
 
 
 def get_weight_load_prob(prob):
@@ -217,7 +232,8 @@ def gen_env(env_args):
 
 def write_train_default_config():
     """
-    在每次训练之前，将
+    在每次训练之前，修改 default.yaml 文件中的 checkpoint_path 和 cal_max_expectation_tasks 配置项，
+    修改 qmix.yaml 中的 epsilon_finish 的配置项
     :return:
     """
     default = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "default.yaml"))
@@ -231,6 +247,12 @@ def write_train_default_config():
 
 
 def write_gen_default_config(checkpoint_path):
+    """
+    在生成数据之前，修改 default.yaml 文件中的 checkpoint_path 和 cal_max_expectation_tasks 配置项，
+    修改 qmix.yaml 中的 epsilon_finish 的配置项
+    :param checkpoint_path:
+    :return:
+    """
     default = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "default.yaml"))
     alg_config = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "algs", "qmix.yaml"))
     default_data = default.data
@@ -241,14 +263,22 @@ def write_gen_default_config(checkpoint_path):
     alg_config.dump()
 
 
-def run_policy(env, policy_name, t_max, flag):
+def run_policy(env: ECMA, policy_name: str, t_max: int, flag: str):
+    """
+    依据不同的策略名称，运行不同的算法（all local, all offload, optimal, random）
+    :param env:
+    :param policy_name:
+    :param t_max:
+    :param flag:
+    :return:
+    """
     policy = Policy(env, policy_name)
     policy.run(t_max)
-    reward = policy.cal_max_expectation()
+    expect_reward = ExpectedReward(policy.total_state, policy.total_reward).get_expected_reward()
 
     file_path = get_data_file_path(policy_name, flag)
     with open(file_path, 'a') as f:
-        f.write(str(reward) + "\n")
+        f.write(str(expect_reward) + "\n")
 
 
 def get_data_file_path(policy_name, flag):
@@ -289,7 +319,10 @@ def plot_light_load():
     flag = "light_load"
     random_mean_reward, all_local_max_expectation, all_offload_max_expectation, rl_max_expectation = get_reward_data(
         flag)
-
+    print(random_mean_reward.tolist())
+    print(all_local_max_expectation.tolist())
+    print(all_offload_max_expectation.tolist())
+    print(rl_max_expectation.tolist())
     x = ModifyYAML(get_ec_config_file_path()).data["light_load_prob"]
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "light_load.eps")
@@ -299,10 +332,13 @@ def plot_light_load():
 
 
 def plot_mid_load():
-    flag = "mid_load"
+    flag = "moderate_load"
     random_mean_reward, all_local_max_expectation, all_offload_max_expectation, rl_max_expectation = get_reward_data(
         flag)
-
+    print(random_mean_reward.tolist())
+    print(all_local_max_expectation.tolist())
+    print(all_offload_max_expectation.tolist())
+    print(rl_max_expectation.tolist())
     x = ModifyYAML(get_ec_config_file_path()).data["mid_load_prob"]
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "moderate_load.eps")
@@ -312,10 +348,13 @@ def plot_mid_load():
 
 
 def plot_weight_load():
-    flag = "weight_load"
+    flag = "heavy_load"
     random_mean_reward, all_local_max_expectation, all_offload_max_expectation, rl_max_expectation = get_reward_data(
         flag)
-
+    print(random_mean_reward.tolist())
+    print(all_local_max_expectation.tolist())
+    print(all_offload_max_expectation.tolist())
+    print(rl_max_expectation.tolist())
     x = ModifyYAML(get_ec_config_file_path()).data["light_load_prob"]
     png_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.png")
     eps_file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "heavy_load.eps")
@@ -390,7 +429,6 @@ def plot_reward(period):
     plt.xlabel(r"time step", fontsize=12)
     plt.ylabel("normalized $r$", fontsize=12)
     plt.yticks(fontsize=12)
-    # plt.xticks(x, fontsize=10)
     plt.xticks(fontsize=12)
     plt.grid()
     plt.legend()
@@ -410,8 +448,7 @@ def get_reward_data(flag):
     random_mean_reward = np.loadtxt(get_data_file_path("random", flag))
     all_local_max_expectation = np.loadtxt(get_data_file_path("all_local", flag))
     all_offload_max_expectation = np.loadtxt(get_data_file_path("all_offload", flag))
-    rl_max_expectation = np.loadtxt(get_data_file_path("rl", flag))
-    # print(random_mean_reward)
+    rl_max_expectation = np.loadtxt(get_data_file_path("optimal", flag))
     reward = [np.max(random_mean_reward), np.max(all_local_max_expectation),
               np.max(all_offload_max_expectation), np.max(rl_max_expectation)]
     max_reward = np.max(reward)

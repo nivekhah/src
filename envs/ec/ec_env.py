@@ -11,18 +11,14 @@ class ECMA(object):
                  seed=None,
                  max_steps=20,
                  bandwidth=[5, 3, 1],
-                 cc=104,
-                 cl=2.6,
+                 cc=27,
+                 cl=2,
                  n_agents=4,
                  n_actions=2,
                  observation_size=2,
-                 prob=[0.3, 0.7, 1],
+                 prob=[0.5, 0.75, 1],
                  sum_d=644.84,
-                 task_proportion=[0.26174748, 0.23825252, 0.24118939, 0.25881061],
-                 test_mode=False,
-                 model_step=0,
-                 state_file=""):
-        self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
+                 task_proportion=[0.26174748, 0.23825252, 0.24118939, 0.25881061]):
         self.n_agents = n_agents
         self.bandwidth = bandwidth
         self.cl = cl
@@ -38,13 +34,6 @@ class ECMA(object):
         self.episode_limit = self.MAX_STEPS
         self.cnt = 0
 
-        self.test_mode = test_mode
-        if self.test_mode:
-            # file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "train_state.txt")
-            self.total_state = np.loadtxt(state_file).tolist()[:model_step]
-            self.obs_num = 0
-            self.state_num = 0
-
     def gen_components(self):
         """
         初始化 edge server和 TCC
@@ -58,7 +47,6 @@ class ECMA(object):
     def step(self, actions):
         self.cnt += 1
         T = self.do_actions(actions)  # 处理完任务所花费的时间
-        # print("处理完任务所花的总时间", T)
         if self.cnt == self.MAX_STEPS:
             done = True
         else:
@@ -66,7 +54,6 @@ class ECMA(object):
         reward = self.sum_d / T
         if not done:
             self.ready_for_next_step()
-        # print(reward)
         return reward, done, {}
 
     def ready_for_next_step(self):
@@ -83,21 +70,11 @@ class ECMA(object):
         T = []
         for es in self.edge_servers:
             time = es.do_action(actions[es.id], self.tcc)
-            # print("执行动作: ", actions[es.id], "所发费的时间为", time)
             T.append(time)
         return np.max(T)
 
     def get_obs(self):
-        if self.test_mode:
-            # 将 state 拆分成 self.n_agents 个 observation
-            agents_obs = []
-            s = self.total_state[self.obs_num]
-            for i in range(self.n_agents):
-                temp_obs = np.array([s[i * 2 + 1], s[i * 2]])
-                agents_obs.append(temp_obs)
-            self.obs_num += 1
-        else:
-            agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
+        agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
         return agents_obs
 
     def get_obs_agent(self, agent_id):
@@ -112,14 +89,10 @@ class ECMA(object):
         获取环境的全局状态，即将每一个 edge server 的 observation 拼凑起来。
         :return: 全局状态
         """
-        if self.test_mode:
-            state = self.total_state[self.state_num]
-            self.state_num += 1
-        else:
-            state = []
-            for es in self.edge_servers:
-                state.append(es.b)
-                state.append(es.d)
+        state = []
+        for es in self.edge_servers:
+            state.append(es.b)
+            state.append(es.d)
         return np.array(state)
 
     def get_state_size(self):
@@ -189,10 +162,7 @@ if __name__ == '__main__':
                observation_size=2,
                prob=[0.8, 0.9, 1],
                sum_d=10,
-               task_proportion=[0.25, 0.25, 0.25, 0.25],
-               test_mode=True,
-               model_step=10,
-               state_file=file_path)
+               task_proportion=[0.25, 0.25, 0.25, 0.25])
     env.reset()
     for i in range(10):
         print("##############", i, "################")

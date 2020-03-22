@@ -86,7 +86,7 @@ class EpisodeRunner:
 
             self.batch.update(post_transition_data, ts=self.t)
 
-            self.t += 1
+            self.t += 1  # self.t 保存的是执行到本回合中的第几个 step
 
         last_data = {
             "state": [self.env.get_state()],
@@ -107,7 +107,7 @@ class EpisodeRunner:
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
         if not test_mode:
-            self.t_env += self.t
+            self.t_env += self.t  # 如果是 test_mode 模式，那么 self.t_env 就不增加，因为 self.t_env 是记录的训练的 step 数
 
         cur_returns.append(episode_return)
 

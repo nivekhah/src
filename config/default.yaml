@@ -3,8 +3,8 @@ batch_size: 32
 batch_size_run: 1
 buffer_cpu_only: true
 buffer_size: 32
-cal_max_expectation_tasks: false
-checkpoint_path: ""
+cal_max_expectation_tasks: true
+checkpoint_path: /home/csyi/pymarl/src/results/models/qmix__2020-03-19_19-14-03
 critic_lr: 0.0005
 env: ec
 env_args: {}

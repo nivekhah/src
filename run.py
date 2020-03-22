@@ -14,7 +14,7 @@ from runners import REGISTRY as r_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
-import pandas as pd
+from envs.ec.expected_reward import ExpectedReward
 
 from envs.wsn.result_analyzer import reward_result, plot_result
 
@@ -206,8 +206,9 @@ def run_sequential(args, logger):
 
         # 保存测试模式下的 state, reward 数据。 隔 args.reward_period 进行测试，测试的 state 数量为 args.reward_period。
         if runner.t_env % args.reward_period == 0:
+            print("---------------------------------测试模式中-----------------------------------------")
             for i in range(int(args.reward_period / 20)):
-                episode_data = runner.run(test_mode=True)
+                episode_data = runner.run(test_mode=True)  # 执行测试模式
                 test_state += get_episode_state(episode_data.data.transition_data)
                 test_reward += get_episode_reward(episode_data.data.transition_data)
 
@@ -286,16 +287,17 @@ def save_state_reward(path, data):
 
 def cal_max_expectation_tasks(args, mac, learner, runner):
     """
+    加载已经训练好的模型，来生成 state-action-reward 数据，用来评价训练好的模型
     :param args:
     :param mac:
     :param learner:
     :param runner:
     :return:
     """
-    print("starting to calculate max expectation value of tasks ......")
     algs_modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "algs", "qmix.yaml"))
     algs_modify.data["epsilon_finish"] = 0
     algs_modify.dump()
+
     modify = ModifyYAML(os.path.join(os.path.dirname(__file__), "config", "envs", "ec.yaml"))
     global_state = []
     global_action = []
@@ -308,33 +310,12 @@ def cal_max_expectation_tasks(args, mac, learner, runner):
         global_action += get_episode_action(episode_data)
         global_reward += get_episode_reward(episode_data)
 
-    mean_reward = 0
-    size_global_state = len(global_state)
-    measure_state, measure_reward = get_measure_state(global_state, global_reward)
-    statistic = statistic_global_state(global_state)
-    measure_reward = measure_reward.tolist()
-    for index, current_state in enumerate(measure_state.tolist()):
-        print("[", current_state, "]: ", statistic[hash(str(current_state))])
-        probability = statistic[hash(str(current_state))] / size_global_state
-        mean_reward += measure_reward[index] * probability
-    # print("number of all state: ", len(measure_state))
-    # print("mean reward: ", mean_reward)
-    # print("length of state of a episode: ", size_global_state)
-
-    state_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_state.csv")
-
-    data = {
-        "state": global_state,
-        "action": global_action,
-        "reward": global_reward
-    }
-    data = pd.DataFrame(data)
-    data.to_csv(state_path)
+    expected_reward = ExpectedReward(global_state, global_reward).get_expected_reward()
 
     label = get_label(modify)
     file_path = os.path.join(os.path.dirname(__file__), "envs", "ec", "output", "rl_" + label + ".txt")
     with open(file_path, "a") as f:
-        f.write(str(mean_reward) + "\n")
+        f.write(str(expected_reward) + "\n")
 
 
 def get_label(modify):
@@ -343,9 +324,9 @@ def get_label(modify):
     elif modify.data["gen_data_light_load"] is True:
         return "light_load"
     elif modify.data["gen_data_mid_load"] is True:
-        return "mid_load"
+        return "moderate_load"
     elif modify.data["gen_data_weight_load"] is True:
-        return "weight_load"
+        return "heavy_load"
     else:
         return "policy_reward"
 
@@ -378,49 +359,3 @@ def get_episode_reward(episode_data):
     for item in reward:
         global_reward.append(item[0])
     return copy.deepcopy(global_reward)
-
-
-def get_measure_state(global_state, global_reward):
-    """
-
-    :param global_state:
-    :param global_reward:
-    :return:
-    """
-    measure_state = []
-    measure_reward = []
-    for index, item in enumerate(global_state):
-        if not is_in_measure_state(measure_state, item):
-            measure_state.append(item)
-            measure_reward.append(global_reward[index])
-    return np.array(measure_state), np.array(measure_reward)
-
-
-def is_in_measure_state(measure_state, item):
-    """
-    判断 item 是否以及存在于 measure_state 中
-    :param measure_state:
-    :param item:
-    :return:
-    """
-    for state in measure_state:
-        if hash(str(state)) == hash(str(item)):
-            return True
-    return False
-
-
-def statistic_global_state(global_state):
-    """
-    从保存所有可能的 state 的列表 global_state 中统计每一个全局 state 出现的频数
-    :param global_state: 生成的所有全局 state
-    :return: 统计之后的 dict
-    """
-    statistic = {}
-    for item in global_state:
-        hashcode = hash(str(item))
-        if hashcode not in statistic:
-            statistic[hashcode] = 1
-        else:
-            count = statistic[hashcode]
-            statistic[hashcode] = (count + 1)
-    return copy.deepcopy(statistic)
