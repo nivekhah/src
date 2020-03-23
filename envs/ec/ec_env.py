@@ -17,8 +17,8 @@ class ECMA(object):
                  n_actions=2,
                  observation_size=2,
                  prob=[0.5, 0.75, 1],
-                 sum_d=644.84,
-                 task_proportion=[0.26174748, 0.23825252, 0.24118939, 0.25881061]):
+                 sum_d=10,
+                 task_proportion=[0.25, 0.25, 0.25, 0.25]):
         self.n_agents = n_agents
         self.bandwidth = bandwidth
         self.cl = cl

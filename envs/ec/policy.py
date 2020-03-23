@@ -27,7 +27,7 @@ class Policy:
 
     def run(self, t_max):
         episodes = int(t_max / self.__env.MAX_STEPS)  # 计算出总共需要执行的回合数
-        for i in range(episodes):
+        for _ in range(episodes):
             self.__env.reset()  # 初始化环境
             episode_reward = 0  # 每一个回合的累积总 reward
             for j in range(self.__env.MAX_STEPS):
@@ -37,8 +37,7 @@ class Policy:
 
                 actions = []
                 for index, agent in enumerate(self.__agents):
-                    action = agent.select_action(obs[index])
-                    actions.append(action)
+                    actions.append(agent.select_action(obs[index]))
                 self.__action_list.append(actions)
                 reward, done, _ = self.__env.step(actions)
 
@@ -48,16 +47,16 @@ class Policy:
 
     def gen_agent(self):
         if self.__policy == "all_offload":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(AllOffloadAgent())
         elif self.__policy == "all_local":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(AllLocalAgent())
         elif self.__policy == "random":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(RandomAgent())
         elif self.__policy == "optimal":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(OptimalAgent())
 
     @property
@@ -86,8 +85,9 @@ class AllOffloadAgent:
     def select_action(obs):
         """
         All Offload 算法选择全部上传
-        :return:
-        """
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
+        """""
         return 1
 
 
@@ -96,10 +96,12 @@ class AllLocalAgent:
     def __init__(self):
         pass
 
-    def select_action(self, obs):
+    @staticmethod
+    def select_action(obs):
         """
         All Local 算法选择全部本地执行
-        :return:
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
         """
         return 0
 
@@ -108,11 +110,13 @@ class RandomAgent:
     def __init__(self):
         pass
 
-    def select_action(self, obs):
+    @staticmethod
+    def select_action(obs):
         """
         Random 算法 action 的选择完全随机
-        :return:
-        """
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
+        """""
         return np.random.randint(0, 2)
 
 
@@ -120,6 +124,7 @@ class OptimalAgent:
     """
     执行最优算法的
     """
+
     def __init__(self):
         self.__optimal_qmix = OptimalQMIX(os.path.join(Path.get_envs_config_path(), "ec.yaml"))
 
@@ -130,18 +135,3 @@ class OptimalAgent:
         :return:
         """
         return self.__optimal_qmix.select_optimal_action(obs)
-
-
-if __name__ == '__main__':
-    env = ECMA()
-    policy = Policy(env, "random")
-    policy.run(2000)
-    statistic = [{}, {}, {}, {}]
-    for action in policy.total_action:
-        for i in range(len(action)):
-            if action[i] in statistic[i].keys():
-                statistic[i][action[i]] = statistic[i][action[i]] + 1
-            else:
-                statistic[i][action[i]] = 1
-    print(statistic)
-
