@@ -371,12 +371,10 @@ def plot(x, random_mean_reward,
          y_label,
          png_file_path,
          eps_file_path,
-         figsize,
+         fig_size,
          fontsize):
-    font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
-    prop = font_manager.FontProperties(fname=font_path)
-    plt.rcParams["font.family"] = prop.get_name()
-    plt.figure(figsize=figsize)
+    rc('text', usetex=True)
+    plt.figure(figsize=fig_size)
     plt.plot(x, rl_max_expectation, "ro-", label="QMIX", linewidth=3,
              markeredgecolor='k', markerfacecoloralt=[0, 0, 0, 0], markersize=10)
     plt.plot(x, random_mean_reward, "cs--", label="random", linewidth=2,
@@ -388,9 +386,15 @@ def plot(x, random_mean_reward,
     plt.xlabel(x_label, fontsize=fontsize)
     plt.ylabel(y_label, fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    plt.xticks(x, fontsize=fontsize)
-    plt.grid()
-    plt.legend(fontsize=fontsize)
+    plt.xticks(x[0:-1:2], x[0:-1:2], fontsize=fontsize)
+    bwith = 2  # 边框宽度设置为2
+    ax = plt.gca()  # 获取边框
+    ax.spines['bottom'].set_linewidth(bwith)
+    ax.spines['left'].set_linewidth(bwith)
+    ax.spines['top'].set_linewidth(bwith)
+    ax.spines['right'].set_linewidth(bwith)
+    plt.grid(linestyle='--')
+    plt.legend(fontsize=fontsize, ncol=2)
     plt.savefig(png_file_path, format="png", dpi=200, bbox_inches="tight")
     plt.savefig(eps_file_path, format="eps", dpi=200, bbox_inches="tight")
     plt.show()
