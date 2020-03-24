@@ -1,5 +1,5 @@
-from envs.ec.component import EdgeServer, TCC
-from envs.ec.modify_yaml import ModifyYAML
+from src.envs.ec.component import EdgeServer, TCC
+from src.envs.ec.modify_yaml import ModifyYAML
 
 import numpy as np
 import os
@@ -22,7 +22,12 @@ class ECMA(object):
                  test_mode=False,
                  model_step=0,
                  state_file=""):
-        self.config = ModifyYAML("/home/csyi/pymarl/src/config/envs/ec.yaml")
+        current_path = os.path.abspath(__file__)
+        # 获取当前文件的父目录
+        father_path = os.path.abspath(os.path.dirname(current_path) + os.path.sep + ".")
+        father_path = os.path.abspath(os.path.dirname(father_path) + os.path.sep + ".")
+        father_path = os.path.abspath(os.path.dirname(father_path) + os.path.sep + ".")
+        self.config = ModifyYAML(os.path.join(father_path,"config","envs","ec.yaml"))
         self.n_agents = n_agents
         self.bandwidth = bandwidth
         self.cl = cl
