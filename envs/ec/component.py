@@ -1,5 +1,4 @@
 import numpy as np
-from src.envs.ec.config import config
 import copy
 
 
@@ -20,10 +19,8 @@ class EdgeServer:
         time = 0
         if action == 0:
             time = self.do_local()
-            # print("本地执行所需要的时间：", time)
         elif action == 1:
             time = self.offload_tcc(tcc)
-            # print("TCC执行所需要的时间：", time)
         self.d = 0
         return time
 
@@ -76,9 +73,7 @@ class EdgeServer:
         """
         assert isinstance(tcc, TCC)
         tb = self.d / self.b
-        # print("任务量为：", self.d, "带宽为: ", self.b, "传输时间：", tb)
         tc = tcc.do_task(self.d)
-        # print("tcc 处理任务的时间：", tc)
         time = tb + tc
         return time
 

@@ -1,9 +1,13 @@
 from envs.ec.ec_env import ECMA
 import numpy as np
+from path import Path
+from envs.ec.optimal_qmix import OptimalQMIX
 import copy
 
+import os
+
 """
-Policy 类包括三种算法： 随机算法， 全部 local， 全部 offload
+Policy 类包括四种算法：随机算法, 全部 local, 全部 offload, 最优 QMIX 算法 
 """
 
 
@@ -22,98 +26,54 @@ class Policy:
         self.gen_agent()
 
     def run(self, t_max):
-        temp_dict = {}
-
-        episodes = int(t_max / self.__env.MAX_STEPS)
-        for i in range(episodes):
-            self.__env.reset()
-            episode_reward = 0
+        episodes = int(t_max / self.__env.MAX_STEPS)  # 计算出总共需要执行的回合数
+        for _ in range(episodes):
+            self.__env.reset()  # 初始化环境
+            episode_reward = 0  # 每一个回合的累积总 reward
             for j in range(self.__env.MAX_STEPS):
-                state = self.__env.get_state()
-                self.__state_list.append(state)
-                self.__env.get_obs()
+                state = self.__env.get_state()  # 从环境获取一个状态
+                self.__state_list.append(state.tolist())  # 将得到 state 保存下来
+                obs = self.__env.get_obs()  # 获取 observations
 
                 actions = []
-                for agent in self.__agents:
-                    action = agent.select_action()
-                    actions.append(action)
+                for index, agent in enumerate(self.__agents):
+                    actions.append(agent.select_action(obs[index]))
                 self.__action_list.append(actions)
                 reward, done, _ = self.__env.step(actions)
 
-                if reward in temp_dict.keys():
-                    count = temp_dict[reward]
-                    temp_dict[reward] = count + 1
-                else:
-                    temp_dict[reward] = 1
-                # if reward != (10/2.5) and reward != (10/25.25) and reward != (10/2.75) and reward != (10/1.5):
-                #     print("异常 reward: ", reward)
-                # print("[state]: ", state, "\t[actions]: ", actions, "\t[reward]: ", reward)
                 self.__reward_list.append(reward)
                 episode_reward += reward
             self.__episodes_reward.append(episode_reward)
 
-        expectation = 0
-        for key in temp_dict.keys():
-            probability = temp_dict[key] / t_max
-            expectation += float(key)*probability
-        # print(temp_dict, "期望值：", expectation)
-
-    def cal_max_expectation(self):
-        measure_state, measure_reward = self.__get_measure_state_reward()
-
-        if self.__policy is "all_offload":
-            for index, item in enumerate(measure_state):
-                print(item.tolist())
-                # print("reward: ", measure_reward[index])
-            np.savetxt("test.txt", measure_state)
-
-        statistic = self.__statistic_global_state()
-        length = len(self.__state_list)
-        reward = 0
-        for index, state in enumerate(measure_state):
-            probability = statistic[str(state)] / length
-            reward += probability * measure_reward[index]
-        return reward
-
-    def __get_measure_state_reward(self):
-        measure_state = []
-        measure_reward = []
-        for index, state in enumerate(self.__state_list):
-            if not self.__is_in_measure_state(measure_state, state):
-                measure_state.append(state)
-                measure_reward.append(self.__reward_list[index])
-        return copy.deepcopy(measure_state), copy.deepcopy(measure_reward)
-
-    @staticmethod
-    def __is_in_measure_state(measure_state, state):
-        for s in measure_state:
-            if hash(str(s)) == hash(str(state)):
-                return True
-        return False
-
-    def __statistic_global_state(self):
-        statistic = {}
-        for state in self.__state_list:
-            if str(state) not in statistic.keys():
-                statistic[str(state)] = 1
-            else:
-                statistic[str(state)] = statistic[str(state)] + 1
-        return copy.deepcopy(statistic)
-
     def gen_agent(self):
         if self.__policy == "all_offload":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(AllOffloadAgent())
         elif self.__policy == "all_local":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(AllLocalAgent())
         elif self.__policy == "random":
-            for i in range(self.__n_agents):
+            for _ in range(self.__n_agents):
                 self.__agents.append(RandomAgent())
+        elif self.__policy == "optimal":
+            for _ in range(self.__n_agents):
+                self.__agents.append(OptimalAgent())
 
     @property
     def episodes_reward(self):
-        return self.__episodes_reward
+        return copy.deepcopy(self.__episodes_reward)
+
+    @property
+    def total_state(self):
+        return copy.deepcopy(self.__state_list)
+
+    @property
+    def total_reward(self):
+        return copy.deepcopy(self.__reward_list)
+
+    @property
+    def total_action(self):
+        return copy.deepcopy(self.__action_list)
 
 
 class AllOffloadAgent:
@@ -122,7 +82,12 @@ class AllOffloadAgent:
         pass
 
     @staticmethod
-    def select_action():
+    def select_action(obs):
+        """
+        All Offload 算法选择全部上传
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
+        """""
         return 1
 
 
@@ -132,7 +97,12 @@ class AllLocalAgent:
         pass
 
     @staticmethod
-    def select_action():
+    def select_action(obs):
+        """
+        All Local 算法选择全部本地执行
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
+        """
         return 0
 
 
@@ -141,24 +111,27 @@ class RandomAgent:
         pass
 
     @staticmethod
-    def select_action():
+    def select_action(obs):
+        """
+        Random 算法 action 的选择完全随机
+        :param obs: 当前 agent对应的 observation
+        :return:  当前 agent 选择的 action
+        """""
         return np.random.randint(0, 2)
 
 
-if __name__ == '__main__':
-    # prob = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    # prob = [0]
-    # from myrun import get_mid_load_prob
-    #
-    # for item in prob:
-    #     p = get_mid_load_prob(item)
-    #     print("带宽概率为：", p)
-    #     env = ECMA(prob=p)
-    #     policy = Policy(env, "random")
-    #     policy.run(60000)
-    #     policy.cal_max_expectation()
+class OptimalAgent:
+    """
+    执行最优算法的
+    """
 
-    env = ECMA()
-    policy = Policy(env, "all_offload")
-    policy.run(6000)
-    policy.cal_max_expectation()
+    def __init__(self):
+        self.__optimal_qmix = OptimalQMIX(os.path.join(Path.get_envs_config_path(), "ec.yaml"))
+
+    def select_action(self, obs):
+        """
+        最优 QMIX 算法通过最优算法选择最优 action
+        :param obs:
+        :return:
+        """
+        return self.__optimal_qmix.select_optimal_action(obs)
