@@ -2,7 +2,7 @@
 OptimalQMIX 类用于获得 TCC, Edge Server 场景下， Edge Server 对应于某一个 Observation 的最优 Action，以及最优 Reward。
 """
 
-from envs.ec.modify_yaml import ModifyYAML
+from src.envs.ec.modify_yaml import ModifyYAML
 import copy
 
 
@@ -78,3 +78,8 @@ class OptimalQMIX:
         self.__observation_size = env_conf["observation_size"]
         self.__sum_task = env_conf["sum_d"]
 
+
+if __name__ == "__main__":
+    from src.path import Path
+    import os
+    oq = OptimalQMIX(os.path.join(Path.get_envs_config_path(),"ec.yaml"))

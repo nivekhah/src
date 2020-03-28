@@ -14,6 +14,7 @@ import copy
 import os
 import time
 import json
+import ast
 from matplotlib import pyplot as plt
 from src.envs.ec.data_processor import DataSaver
 pd.set_option('precision', 7)
@@ -158,11 +159,20 @@ class QLearningTable:
         return refined_action
 
 
-def train(times=10000):
-    data_saver = DataSaver("RL_training")
-    data_saver.add_item("start_time", time.strftime("%Y-%m-%d_%H-%M-%S"))
+def create_env():
     from src.envs.ec.ec_env import ECMA
-    env = ECMA()
+    from src.envs.ec.modify_yaml import ModifyYAML
+    from src.path import Path
+    config = ModifyYAML(os.path.join(Path.get_envs_config_path(),"ec.yaml")).data
+
+    env = ECMA(**config["env_args"])
+    return env
+
+def train(times=10000):
+    data_saver = DataSaver("qlearning_training")
+    data_saver.add_item("start_time", time.strftime("%Y-%m-%d_%H-%M-%S"))
+    #创建环境
+    env = create_env()
     RL = QLearningTable()
     data_saver.add_item("RL_param",RL.param)
     data_saver.add_item("episodes",times)
@@ -244,11 +254,23 @@ def plot_training(filename="RL_training_2020-03-23_08-26-58"):
     plt.plot(list(range(len(reward))),reward)
     plt.show()
 
-def verify_state():
+def verify_state(model_path):
     """
     读取Q-table，判断那些状态没有收敛
     :return:
     """
+    #建立Q表
+    if not os.path.exists(model_path):
+        print("model path not exist!")
+        return
+    q_table = pd.read_csv(model_path, index_col=0)
+    q_table.columns = list(range(q_table.columns.shape[0]))
+    #获取所有状态，排除终止状态，检查每个
+    index = q_table.index
+    all_states = 
+    #被排除的states
+    exclude_state = []
+    #
     pass
 
 def plot_state_training():
@@ -273,4 +295,6 @@ if __name__ == '__main__':
     # RL = QLearningTable()
     # RL.refine_action(4)
     # extract_reward()
-    plot_training()
+    # plot_training()
+    # create_env()
+    verify_state("/home/zzw/文档/pymarl/src/envs/ec/data/q_model/q_tabel_2020-03-23_09-46-03.csv")

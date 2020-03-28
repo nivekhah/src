@@ -878,7 +878,7 @@ def uniform_direct():
 
 if __name__ == "__main__":
     # region_error()
-    # cdf_mse()
+    cdf_mse()
     # sum_data_influence()
     # sum_data_influence_uniform()
     # uniform_fim()

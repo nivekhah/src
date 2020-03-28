@@ -655,15 +655,15 @@ if __name__ == "__main__":
     # plot_result_b()
     # plot_result_c()
     # plot_cdf()
-    # plot_light_load()
-    # plot_mid_load()  # 数据缺失
-    # plot_heavy_load()
-    # plot_scale_light()
-    # plot_scale_heavy()
+    plot_light_load()
+    plot_mid_load()  # 数据缺失
+    plot_heavy_load()
+    plot_scale_light()
+    plot_scale_heavy()
     # plot_reward()
     # cal_cdf_mse()
     # plot_reward()
     # plot_reward1()
-    plot_reward2() #数据缺失
-    # plot_scale_moderate()
+    # plot_reward2() #数据缺失
+    plot_scale_moderate()
     pass
